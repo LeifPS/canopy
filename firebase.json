@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "canopy",
+      "rules": "firestore.canopy.rules"
+    }
+  ]
+}

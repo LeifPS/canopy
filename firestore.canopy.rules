@@ -1,0 +1,54 @@
+rules_version = '2';
+// Regeln NUR für die Datenbank "canopy" im Projekt chess-rng.
+// Die Foil-Eleven-Datenbank "(default)" wird von diesen Regeln nicht berührt.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() { return signedIn() && request.auth.token.canopyAdmin == true; }
+
+    // Öffentliches Profil: Name, Avatar, Level, sichtbare Achievements. Jeder darf lesen (Freunde,
+    // Bestenlisten), nur der Besitzer schreibt.
+    match /profiles/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid);
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // Private Daten (Einstellungen, verknüpfte Spiel-Accounts). Nur der Besitzer.
+    match /private/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+    }
+
+    // Nutzernamen sind eindeutig: ein Dokument pro Name, das auf die uid zeigt.
+    match /usernames/{name} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Spielstände: saves/{uid}/games/{gameId}, dazu Versionen, die nie gelöscht oder
+    // überschrieben werden dürfen (Schutz gegen Datenverlust).
+    match /saves/{uid}/games/{gameId} {
+      allow read, write: if isOwner(uid) || isAdmin();
+      match /versions/{versionId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid);
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Feedback zu Spielen und Prototypen: jeder Angemeldete darf abgeben, nur Admins lesen.
+    match /feedback/{id} {
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Alles andere ist gesperrt.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

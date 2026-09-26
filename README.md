@@ -1,0 +1,52 @@
+# Canopy
+
+- **Canopy Base**: die Website mit allen Spielen (`index.html`, Daten in `games.json`)
+- **Canopy ID**: der gemeinsame Account für alle Spiele (in Arbeit)
+
+## Neues Spiel eintragen
+
+Einen Eintrag in `games.json` ergänzen. Status: `live`, `beta`, `prototyp`, `mono`, `demnaechst`.
+Mit `releaseAt` (z. B. `"2026-11-01"`) zeigt die Seite bei kommenden Spielen einen Countdown.
+Ist `repo` gesetzt, holt die Seite das Datum des letzten Updates automatisch von GitHub.
+
+## Lokal ansehen
+
+```bash
+python3 -m http.server 8000
+# http://localhost:8000
+```
+
+## Hosting
+
+Statische Seite, z. B. über Cloudflare Pages wie die anderen Spiele (kein Build-Schritt,
+Ausgabeordner `/`).
+
+## Firebase: Sicherheitsregeln (wichtig)
+
+Canopy nutzt das Firebase-Projekt von Foil Eleven (`chess-rng`, Blaze-Tarif), aber eine
+**eigene Firestore-Datenbank namens `canopy`**. Foil Eleven bleibt in `(default)`.
+
+1. **Nie Foil-Regeln aus diesem Repo deployen.** `firebase.json` hier kennt nur die Datenbank
+   `canopy`. Die Foil-Regeln liegen im Repo `foil-xi`.
+2. **Keine Cloud Functions mit der Codebase `default`.** Die gehört Foil (Discord-Bot,
+   Liga-Rollover). Canopy-Functions bekommen die Codebase `canopy`, sonst löscht ein Deploy die
+   Foil-Funktionen.
+3. **Vor dem ersten Canopy-Account** muss der Foil-PR „geschützte Foil-Daten nur für
+   Vereinskonten“ deployt sein. Sonst könnten Canopy-Konten Foil-Spielstände lesen und schreiben.
+4. **Spielstand-Versionen** (`saves/{uid}/games/{gameId}/versions`) dürfen von Spielern nie
+   gelöscht oder überschrieben werden, nur neue angelegt.
+
+### Einmalige Einrichtung in der Firebase-Konsole
+
+- Firestore → Datenbank hinzufügen → ID `canopy`, Region wie `(default)`
+- Firestore → Disaster Recovery: Point-in-Time-Recovery und tägliche Backups für **beide** Datenbanken
+- Abrechnung → Budget-Warnung setzen
+- Authentication: Anbieter Google aktivieren, autorisierte Domain der Canopy-Base-Seite eintragen
+
+### Regeln deployen
+
+```bash
+firebase deploy --only firestore
+```
+
+Deployt ausschließlich die Regeln der Datenbank `canopy` (siehe `firebase.json`).

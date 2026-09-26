@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canopy Base</title>
+<meta name="description" content="Canopy Base: alle Spiele von Canopy an einem Ort.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --ground: #F2F4F0;
+    --surface: #FFFFFF;
+    --ink: #15201B;
+    --muted: #5B6862;
+    --line: #D8DFDA;
+    --moss: #2E6A4E;
+    --moss-ink: #FFFFFF;
+    --sun: #D9962B;
+    --live: #2E7D57;
+    --beta: #B7791F;
+    --proto: #7A4FB5;
+    --mono: #3D6F8F;
+    --soon: #6B7671;
+    --chip-bg: #E6EBE7;
+    --shadow: 0 1px 2px rgba(21,32,27,.06), 0 8px 24px -12px rgba(21,32,27,.18);
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono-font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C;
+      --moss: #5DAE84; --moss-ink: #0F1513; --sun: #E8AE4E; --chip-bg: #1F2A25;
+      --live: #5DBB8A; --beta: #E0A548; --proto: #B08BE6; --mono: #72A9CC; --soon: #8C9993;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C;
+    --moss: #5DAE84; --moss-ink: #0F1513; --sun: #E8AE4E; --chip-bg: #1F2A25;
+    --live: #5DBB8A; --beta: #E0A548; --proto: #B08BE6; --mono: #72A9CC; --soon: #8C9993;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; margin: 0; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--moss); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 32px); }
+
+  /* Kopfzeile */
+  header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--ground) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 16px; padding-block: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand svg { width: 30px; height: 30px; flex: none; }
+  .brand b { font-family: var(--display); font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+  .brand span { font-family: var(--display); font-weight: 500; font-size: 19px; color: var(--muted); letter-spacing: -.02em; }
+  .top .spacer { flex: 1; }
+  .id-btn { display: inline-flex; align-items: center; gap: 8px; font: 600 14px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+  .id-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sun); }
+  .id-note { font-size: 13px; color: var(--muted); }
+
+  /* Spotlight */
+  .spot { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: center; padding-block: clamp(28px, 6vw, 64px) clamp(20px, 4vw, 40px); }
+  .eyebrow { font: 500 12px var(--mono-font); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .spot h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 6vw, 60px); line-height: 1; letter-spacing: -.035em; margin: 10px 0 14px; text-wrap: balance; }
+  .spot h1 em { font-style: normal; color: var(--moss); }
+  .spot p.lead { font-size: 17px; color: var(--muted); max-width: 46ch; margin: 0 0 22px; }
+  .spot-card { position: relative; border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 4 / 3; max-width: 100%; color: #fff; text-decoration: none; display: block; }
+  .spot-card .cover { position: absolute; inset: 0; }
+  .spot-card .monogram { display: none; }
+  .spot-card .meta { position: absolute; inset: auto 0 0 0; padding: 20px 22px; background: linear-gradient(transparent, rgba(0,0,0,.55)); display: grid; gap: 4px; }
+  .spot-card .meta small { font: 500 12px var(--mono-font); letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+  .spot-card .meta strong { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.03em; line-height: 1.05; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; font: 600 15px var(--body); border-radius: 12px; padding: 11px 18px; text-decoration: none; border: 1px solid transparent; cursor: pointer; }
+  .btn.primary { background: var(--moss); color: var(--moss-ink); }
+  .btn.ghost { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Kennzahlen */
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-block: 14px 0; color: var(--muted); font-size: 14px; }
+  .facts b { font-family: var(--display); color: var(--ink); font-size: 18px; font-variant-numeric: tabular-nums; margin-right: 4px; }
+
+  /* Abschnitte */
+  section.block { padding-block: clamp(24px, 4vw, 40px); border-top: 1px solid var(--line); }
+  .block-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+  .block-head h2 { font-family: var(--display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); letter-spacing: -.025em; margin: 0; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .chip { font: 600 13px var(--body); color: var(--ink); background: var(--chip-bg); border: 1px solid transparent; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .chip .n { font-family: var(--mono-font); font-size: 11px; opacity: .7; margin-left: 4px; }
+  .search { font: 500 14px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; width: 180px; max-width: 100%; }
+
+  /* Spielekarten */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .game { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; transition: transform .18s ease, box-shadow .18s ease; }
+  .game:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .game .cover { position: relative; aspect-ratio: 16 / 9; max-width: 100%; }
+  .game .body { padding: 14px 16px 16px; display: grid; gap: 8px; flex: 1; align-content: start; }
+  .game h3 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.02em; margin: 0; }
+  .game p { margin: 0; color: var(--muted); font-size: 14px; }
+  .game .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 6px; }
+  .game .when { font: 500 12px var(--mono-font); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .play { white-space: nowrap; font: 600 14px var(--body); color: var(--moss); text-decoration: none; }
+  .play[aria-disabled="true"] { color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; }
+
+  .status { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--body); background: rgba(255,255,255,.92); color: #15201B; border-radius: 999px; padding: 4px 10px 4px 8px; }
+  .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .status.live { --c: #2E7D57; } .status.beta { --c: #B7791F; } .status.prototyp { --c: #7A4FB5; } .status.mono { --c: #3D6F8F; } .status.demnaechst { --c: #6B7671; }
+  .fresh { position: absolute; top: 12px; right: 12px; font: 600 11px var(--mono-font); letter-spacing: .06em; text-transform: uppercase; background: var(--sun); color: #15201B; border-radius: 6px; padding: 3px 7px; }
+  .monogram { position: absolute; left: 16px; bottom: 10px; font-family: var(--display); font-weight: 800; font-size: 44px; letter-spacing: -.04em; color: rgba(255,255,255,.95); line-height: 1; }
+
+  .empty { color: var(--muted); padding: 24px 0; }
+
+  /* Zweispaltig: Neuigkeiten + Canopy ID */
+  .two { display: grid; grid-template-columns: 1.3fr 1fr; gap: clamp(20px, 4vw, 48px); }
+  .feed { list-style: none; margin: 0; padding: 0; display: grid; }
+  .feed li { display: grid; grid-template-columns: 92px 1fr; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .feed li:last-child { border-bottom: 0; }
+  .feed time { font: 500 12px var(--mono-font); color: var(--muted); padding-top: 3px; font-variant-numeric: tabular-nums; }
+  .feed b { font-weight: 600; }
+  .feed span { color: var(--muted); }
+  .id-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; display: grid; gap: 12px; align-content: start; }
+  .id-panel h3 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -.02em; margin: 0; }
+  .id-panel ul { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+  .id-panel .soon { font: 500 12px var(--mono-font); letter-spacing: .06em; text-transform: uppercase; color: var(--sun); }
+
+  footer { border-top: 1px solid var(--line); padding-block: 22px 32px; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+
+  @media (max-width: 760px) {
+    .spot, .two { grid-template-columns: 1fr; }
+    .id-note { display: none; }
+    .search { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { .game { transition: none; } .game:hover { transform: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#" aria-label="Canopy Base Startseite">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M3 22a13 13 0 0 1 26 0z" fill="var(--moss)"/>
+        <path d="M8 22a8 8 0 0 1 16 0z" fill="var(--sun)"/>
+        <rect x="15" y="22" width="2" height="7" rx="1" fill="var(--ink)"/>
+      </svg>
+      <b>Canopy</b><span>Base</span>
+    </a>
+    <div class="spacer"></div>
+    <span class="id-note">Fortschritt überall: bald mit Canopy ID</span>
+    <button class="id-btn" id="idBtn" type="button" aria-describedby="idPanel"><i class="dot"></i>Anmelden</button>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="spot" id="spot" aria-live="polite"></section>
+  </div>
+
+  <div class="wrap">
+    <section class="block" id="spiele">
+      <div class="block-head">
+        <h2>Alle Spiele</h2>
+        <div class="filters" role="group" aria-label="Nach Status filtern" id="filters"></div>
+      </div>
+      <div style="margin:-6px 0 18px"><input class="search" id="search" type="search" placeholder="Spiel suchen" aria-label="Spiel suchen"></div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="block">
+      <div class="two">
+        <div>
+          <div class="block-head"><h2>Zuletzt aktualisiert</h2></div>
+          <ul class="feed" id="feed"></ul>
+        </div>
+        <aside class="id-panel" id="idPanel">
+          <span class="soon">In Arbeit</span>
+          <h3>Canopy ID</h3>
+          <p style="margin:0;color:var(--muted)">Ein Account für alle Spiele. Mit Nutzername und Passwort oder Google.</p>
+          <ul>
+            <li>Fortschritt online gespeichert, auf jedem Gerät weiterspielen</li>
+            <li>Spielzeit und Achievements aus allen Spielen</li>
+            <li>Freunde, Bestenlisten und Rekord-Duelle</li>
+            <li>Bestehende Spielstände bleiben erhalten und werden übernommen</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="year"></span> Canopy Games</span>
+    <span>Canopy Base · Canopy ID</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const STATUS = {
+    live: 'Live', beta: 'Beta', prototyp: 'Prototyp', mono: 'Mono', demnaechst: 'Demnächst'
+  };
+  const FRESH_DAYS = 14;
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const today = new Date();
+  const dayMs = 86400000;
+  const fmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
+  let games = [];
+  let filter = 'alle';
+  let query = '';
+
+  // Ein kleines "Blätterdach" pro Spiel: überlappende Bögen, aus der Spiel-ID abgeleitet, immer gleich.
+  function cover(game) {
+    let h = 0; for (const ch of game.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const rnd = () => ((h = (h * 1664525 + 1013904223) >>> 0) / 4294967296);
+    const base = game.color || '#2E6A4E';
+    let arcs = '';
+    for (let i = 0; i < 7; i++) {
+      const cx = rnd() * 320, cy = 40 + rnd() * 150, r = 50 + rnd() * 90;
+      const o = (0.08 + rnd() * 0.16).toFixed(2);
+      arcs += `<circle cx="${cx.toFixed(0)}" cy="${cy.toFixed(0)}" r="${r.toFixed(0)}" fill="#fff" fill-opacity="${o}"/>`;
+    }
+    const mono = game.mark || game.title.split(/[\s-]+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase();
+    return `<svg class="cover" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%">
+      <rect width="320" height="180" fill="${esc(base)}"/>${arcs}
+      <rect width="320" height="180" fill="url(#shade)"/>
+      <defs><linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></linearGradient></defs>
+    </svg><span class="monogram" aria-hidden="true">${esc(mono)}</span>`;
+  }
+
+  const daysAgo = (d) => d ? Math.floor((today - new Date(d)) / dayMs) : Infinity;
+  function whenText(g) {
+    if (g.status === 'demnaechst') {
+      if (!g.releaseAt) return 'Termin folgt';
+      const d = Math.ceil((new Date(g.releaseAt) - today) / dayMs);
+      return d > 0 ? `in ${d} Tag${d === 1 ? '' : 'en'}` : 'heute';
+    }
+    if (!g.updatedAt) return '';
+    const d = daysAgo(g.updatedAt);
+    if (d <= 0) return 'heute aktualisiert';
+    if (d === 1) return 'gestern aktualisiert';
+    if (d < 30) return `vor ${d} Tagen aktualisiert`;
+    return `aktualisiert ${fmt.format(new Date(g.updatedAt))}`;
+  }
+
+  function card(g) {
+    const playable = !!g.url && g.status !== 'demnaechst';
+    const fresh = playable && daysAgo(g.updatedAt) <= FRESH_DAYS;
+    return `<article class="game">
+      <div class="cover">${cover(g)}
+        <span class="status ${esc(g.status)}"><i></i>${STATUS[g.status] || esc(g.status)}</span>
+        ${fresh ? '<span class="fresh">Update</span>' : ''}
+      </div>
+      <div class="body">
+        <h3>${esc(g.title)}</h3>
+        <p>${esc(g.tagline)}</p>
+        <div class="tags">${(g.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+        <div class="row">
+          <span class="when">${esc(whenText(g))}</span>
+          ${playable
+            ? `<a class="play" href="${esc(g.url)}" target="_blank" rel="noopener">Spielen →</a>`
+            : `<span class="play" aria-disabled="true">Bald</span>`}
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function renderSpot() {
+    const playable = games.filter((g) => g.url && g.status !== 'demnaechst' && g.updatedAt);
+    const g = playable.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))[0];
+    const live = games.filter((x) => x.status !== 'demnaechst').length;
+    const soon = games.filter((x) => x.status === 'demnaechst').length;
+    $('#spot').innerHTML = `
+      <div>
+        <div class="eyebrow">Canopy Base</div>
+        <h1>Alle Spiele. <em>Ein Ort.</em></h1>
+        <p class="lead">Hier findest du jedes Canopy-Spiel, siehst was neu ist und was als Nächstes kommt. Bald speichert Canopy ID deinen Fortschritt aus allen Spielen an einem Ort.</p>
+        <div class="btn-row">
+          ${g ? `<a class="btn primary" href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.title)} spielen</a>` : ''}
+          <a class="btn ghost" href="#spiele">Alle Spiele ansehen</a>
+        </div>
+        <div class="facts"><span><b>${live}</b>spielbar</span><span><b>${soon}</b>in Arbeit</span><span><b>1</b>Account für alles, bald</span></div>
+      </div>
+      ${g ? `<a class="spot-card" href="${esc(g.url)}" target="_blank" rel="noopener" style="background:${esc(g.color)}">
+        <div class="cover">${cover(g)}</div>
+        <div class="meta"><small>Neuestes Update · ${esc(whenText(g))}</small><strong>${esc(g.title)}</strong></div>
+      </a>` : ''}`;
+  }
+
+  function renderFilters() {
+    const counts = { alle: games.length };
+    for (const g of games) counts[g.status] = (counts[g.status] || 0) + 1;
+    const keys = ['alle', ...Object.keys(STATUS).filter((k) => counts[k])];
+    $('#filters').innerHTML = keys.map((k) =>
+      `<button class="chip" type="button" data-f="${k}" aria-pressed="${k === filter}">${k === 'alle' ? 'Alle' : STATUS[k]}<span class="n">${counts[k]}</span></button>`).join('');
+  }
+
+  function renderGrid() {
+    const q = query.trim().toLowerCase();
+    const order = { live: 0, beta: 1, mono: 2, prototyp: 3, demnaechst: 4 };
+    const list = games
+      .filter((g) => filter === 'alle' || g.status === filter)
+      .filter((g) => !q || (g.title + ' ' + g.tagline + ' ' + (g.tags || []).join(' ')).toLowerCase().includes(q))
+      .sort((a, b) => (order[a.status] - order[b.status]) || (daysAgo(a.updatedAt) - daysAgo(b.updatedAt)));
+    $('#grid').innerHTML = list.length ? list.map(card).join('') : '<p class="empty">Kein Spiel gefunden.</p>';
+  }
+
+  function renderFeed() {
+    const items = games.filter((g) => g.updatedAt).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 6);
+    $('#feed').innerHTML = items.map((g) =>
+      `<li><time datetime="${esc(g.updatedAt)}">${fmt.format(new Date(g.updatedAt))}</time><div><b>${esc(g.title)}</b> <span>wurde aktualisiert</span></div></li>`).join('')
+      || '<li><span>Noch keine Updates.</span></li>';
+  }
+
+  function renderAll() { renderSpot(); renderFilters(); renderGrid(); renderFeed(); }
+
+  // Letztes Update live von GitHub holen: letzter Commit auf dem Hauptzweig (öffentliche Repos). Klappt das nicht, bleibt der Wert aus games.json.
+  async function refreshFromGitHub() {
+    const withRepo = games.filter((g) => g.repo);
+    const results = await Promise.allSettled(withRepo.map((g) =>
+      fetch(`https://api.github.com/repos/${g.repo}/commits?per_page=1`).then((r) => r.ok ? r.json() : Promise.reject(r.status))));
+    let changed = false;
+    results.forEach((r, i) => {
+      const date = r.status === 'fulfilled' && r.value[0]?.commit?.committer?.date;
+      if (date) {
+        const d = date.slice(0, 10);
+        if (d !== withRepo[i].updatedAt) { withRepo[i].updatedAt = d; changed = true; }
+      }
+    });
+    if (changed) renderAll();
+  }
+
+  $('#filters').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-f]'); if (!b) return;
+    filter = b.dataset.f; renderFilters(); renderGrid();
+  });
+  $('#search').addEventListener('input', (e) => { query = e.target.value; renderGrid(); });
+  $('#idBtn').addEventListener('click', () => {
+    const p = $('#idPanel'); p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    p.animate?.([{ boxShadow: '0 0 0 0 var(--sun)' }, { boxShadow: '0 0 0 6px transparent' }], { duration: 900 });
+  });
+  $('#year').textContent = today.getFullYear();
+
+  fetch('games.json')
+    .then((r) => r.json())
+    .then((data) => { games = data.games || []; renderAll(); refreshFromGitHub().catch(() => {}); })
+    .catch(() => { $('#grid').innerHTML = '<p class="empty">Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.</p>'; });
+})();
+</script>
+</body>
+</html>

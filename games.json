@@ -1,0 +1,116 @@
+{
+  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele.",
+  "games": [
+    {
+      "id": "foil-eleven",
+      "title": "Foil Eleven",
+      "mark": "FE",
+      "tagline": "Fußball-Sammelkarten: Packs öffnen, Verein aufbauen, in Liga, Turnieren und Skill-Duellen antreten.",
+      "url": "https://foil-xi.pages.dev",
+      "repo": "LeifPS/foil-xi",
+      "status": "live",
+      "color": "#1F3F8F",
+      "tags": [
+        "Sammelkarten",
+        "Online",
+        "Liga"
+      ],
+      "updatedAt": "2026-09-24"
+    },
+    {
+      "id": "tierspiel",
+      "title": "Tierspiel",
+      "mark": "TS",
+      "tagline": "Idle-Gacha: Eier kaufen, ausbrüten, Tiere sammeln und ausrüsten, Münzen verdienen, auch offline.",
+      "url": "https://tierspiel.pages.dev",
+      "repo": "LeifPS/tierspiel",
+      "status": "beta",
+      "color": "#5B3FA0",
+      "tags": [
+        "Idle",
+        "Gacha",
+        "Handel"
+      ],
+      "updatedAt": "2026-09-26"
+    },
+    {
+      "id": "chess-rng",
+      "title": "Chess RNG",
+      "mark": "CH",
+      "tagline": "Schach mit Zufall: Figuren würfeln, Loadouts bauen, in der Rangliste aufsteigen.",
+      "url": "https://chessrng.pages.dev",
+      "repo": "LeifPS/chessrng",
+      "status": "live",
+      "color": "#1E5A48",
+      "tags": [
+        "Strategie",
+        "RNG",
+        "Rangliste"
+      ],
+      "updatedAt": "2026-09-25"
+    },
+    {
+      "id": "cookie-rng-2",
+      "title": "Cookie RNG II",
+      "mark": "CK2",
+      "tagline": "Würfeln für seltene Kekse: alle 520 Einträge sammeln, Ausrüstung craften, Rangliste erklimmen.",
+      "url": "https://cookie-rng.web.app",
+      "repo": null,
+      "status": "live",
+      "color": "#B4552F",
+      "tags": [
+        "RNG",
+        "Sammeln",
+        "Rangliste"
+      ],
+      "updatedAt": null
+    },
+    {
+      "id": "cookie-rng",
+      "title": "Cookie RNG",
+      "mark": "CK",
+      "tagline": "Das Original: Kekse würfeln, Sammlung vervollständigen, per Rebirth das Glück steigern.",
+      "url": "https://cookierng.pages.dev",
+      "repo": null,
+      "status": "live",
+      "color": "#8A5A2B",
+      "tags": [
+        "RNG",
+        "Sammeln"
+      ],
+      "updatedAt": null
+    },
+    {
+      "id": "ernte-zeit",
+      "title": "Ernte-Zeit",
+      "mark": "EZ",
+      "tagline": "Farm-Spiel: Samen kaufen, ernten, Mutationen entdecken, Hof ausbauen und in Mondnächten handeln.",
+      "url": "https://rangspiel.pages.dev",
+      "repo": "LeifPS/rangspiel",
+      "status": "live",
+      "color": "#A8761A",
+      "tags": [
+        "Farm",
+        "Idle",
+        "Tausch"
+      ],
+      "updatedAt": "2026-04-29"
+    },
+    {
+      "id": "snake",
+      "title": "Snake",
+      "mark": "SN",
+      "tagline": "Das erste Canopy-Monogame: schnell gebaut, mit Bestenliste und Achievements von Anfang an.",
+      "url": null,
+      "repo": null,
+      "status": "demnaechst",
+      "color": "#3F5A50",
+      "tags": [
+        "Mono",
+        "Arcade"
+      ],
+      "updatedAt": null,
+      "releaseAt": null
+    }
+  ]
+}
