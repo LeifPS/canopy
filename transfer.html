@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spielstand übertragen · Canopy ID</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+  :root { --ground: #F2F4F0; --surface: #FFFFFF; --ink: #15201B; --muted: #5B6862; --line: #D8DFDA; --moss: #2E6A4E; --moss-ink: #FFFFFF; --danger: #B3402F;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif; --body: "Figtree", "Segoe UI", system-ui, sans-serif; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C; --moss: #5DAE84; --moss-ink: #0F1513; --danger: #E3735F; } }
+  :root[data-theme="dark"] { color-scheme: dark; --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C; --moss: #5DAE84; --moss-ink: #0F1513; --danger: #E3735F; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 var(--body); padding: 24px 16px; }
+  .card { max-width: 440px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 24px; display: grid; gap: 14px; }
+  h1 { font: 800 26px/1.1 var(--display); letter-spacing: -.02em; margin: 0; }
+  p { margin: 0; color: var(--muted); }
+  .btn { font: 600 15px var(--body); border-radius: 12px; padding: 11px 16px; border: 1px solid var(--line); cursor: pointer; background: var(--surface); color: var(--ink); text-align: center; text-decoration: none; }
+  .btn.primary { background: var(--moss); color: var(--moss-ink); border-color: transparent; }
+  .btn[disabled] { opacity: .6; cursor: progress; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .err { color: var(--danger); }
+  :focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="card" id="card"><h1>Spielstand übertragen</h1><p>Wird geladen …</p></div>
+
+<script type="module">
+// Ablauf: Das Spiel öffnet diese Seite als Fenster und schickt seinen lokalen Spielstand per
+// postMessage. Wir akzeptieren nur Nachrichten von der Adresse, die in games.json für das Spiel steht.
+// Der Spielstand im Spiel selbst wird dabei nicht verändert, er wird nur kopiert.
+import * as id from './js/canopy-id.js';
+
+const card = document.getElementById('card');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const gameId = new URLSearchParams(location.search).get('g');
+let game = null, incoming = null, gameOrigin = null;
+
+function view(html) { card.innerHTML = html; }
+function tell(msg) { try { window.opener?.postMessage({ canopy: 1, ...msg }, gameOrigin); } catch (e) {} }
+
+addEventListener('message', (e) => {
+  if (!gameOrigin || e.origin !== gameOrigin || e.source !== window.opener) return;
+  const m = e.data;
+  if (m?.canopy === 1 && m.type === 'transfer-data' && typeof m.data === 'string') { incoming = m.data; step(); }
+});
+
+async function step() {
+  const s = id.state();
+  if (!s.user || s.isGuest || !s.profile?.name) {
+    view(`<h1>Erst anmelden</h1><p>Um deinen Spielstand aus ${esc(game.title)} zu übernehmen, melde dich mit deiner Canopy ID an. Danach kommst du hierher zurück.</p>
+      <div class="row"><a class="btn primary" href="account.html" target="_blank" rel="noopener">Anmelden oder registrieren</a><button class="btn" id="again">Ich bin angemeldet</button></div>`);
+    document.getElementById('again').addEventListener('click', () => location.reload());
+    return;
+  }
+  if (!incoming) return view(`<h1>${esc(game.title)}</h1><p>Warte auf den Spielstand aus dem Spiel … Lass das Spiel-Fenster geöffnet.</p>`);
+  let cloud;
+  try { cloud = await id.loadSave(game.id); } catch (e) { return view(`<h1>Das hat nicht geklappt</h1><p class="err">${esc(e.message)}</p>`); }
+  const kb = Math.max(1, Math.round(incoming.length / 1024));
+  view(`<h1>${esc(game.title)} übertragen</h1>
+    <p>Angemeldet als <strong>${esc(s.name)}</strong>. Dein Spielstand (${kb} KB) wird in deine Canopy ID kopiert. Im Spiel selbst bleibt er unverändert.</p>
+    ${cloud.data ? '<p class="err">In deinem Account liegt schon ein Spielstand für dieses Spiel. Er wird ersetzt, bleibt aber als ältere Version gespeichert.</p>' : ''}
+    <div class="row"><button class="btn primary" id="go">Jetzt übertragen</button><button class="btn" id="no">Abbrechen</button></div>
+    <p id="msg"></p>`);
+  document.getElementById('no').addEventListener('click', () => window.close());
+  document.getElementById('go').addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    try {
+      const r = await id.writeSave(game.id, incoming, null);
+      tell({ type: 'transfer-done', version: r.version });
+      view(`<h1>Fertig ✓</h1><p>Dein Spielstand ist jetzt in deiner Canopy ID. Spiel ${esc(game.title)} ab sofort in Canopy Base weiter, dann ist er auf jedem Gerät da.</p>
+        <div class="row"><a class="btn primary" href="play.html?g=${encodeURIComponent(game.id)}">In Canopy Base spielen</a><button class="btn" onclick="window.close()">Fenster schließen</button></div>`);
+    } catch (err) {
+      e.target.disabled = false;
+      document.getElementById('msg').innerHTML = `<span class="err">${esc(err.message)}</span>`;
+    }
+  });
+}
+
+fetch('games.json').then((r) => r.json()).then(({ games }) => {
+  game = (games || []).find((g) => g.id === gameId);
+  if (!game || !game.url || !window.opener) return view('<h1>Spielstand übertragen</h1><p>Öffne diese Seite über den Button „In Canopy ID übertragen“ im Spiel.</p><a class="btn" href="./">Zu Canopy Base</a>');
+  gameOrigin = new URL(game.url, location.href).origin;
+  id.onChange(() => step());
+  tell({ type: 'transfer-ready' });
+}).catch(() => view('<h1>Canopy ist gerade nicht erreichbar</h1><p>Prüfe deine Internetverbindung und versuch es noch einmal.</p>'));
+</script>
+</body>
+</html>
