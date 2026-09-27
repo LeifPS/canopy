@@ -79,7 +79,7 @@ import * as id from './js/canopy-id.js';
 const gameKey = new URLSearchParams(location.search).get('g');
 const stage = document.getElementById('stage');
 const fail = (text) => { stage.innerHTML = `<div class="msg"><p>${text}</p><p><a href="./">Zurück zu allen Spielen</a></p></div>`; };
-let frame = null, game = null, origin = '*';
+let frame = null, game = null, origin = '*', gameSaidHello = false;
 
 // Wer spielt, oben rechts anzeigen
 const who = document.getElementById('who');
@@ -110,6 +110,7 @@ addEventListener('message', async (e) => {
   try {
     switch (m.type) {
       case 'ready':
+        gameSaidHello = true; document.getElementById('notLinked')?.remove();
         playing = true; lastTick = performance.now();
         id.ensureUser().then(() => { const s = id.state(); send({ type: 'user', user: { name: s.name, guest: s.isGuest } }); }).catch(() => {});
         break;
@@ -176,7 +177,18 @@ fetch('games.json').then((r) => r.json()).then(({ games }) => {
   frame.title = game.title;
   frame.allow = 'fullscreen; autoplay; gamepad; clipboard-write';
   stage.appendChild(frame);
-  frame.addEventListener('load', () => { try { frame.contentWindow.focus(); } catch (e) {} });
+  frame.addEventListener('load', () => {
+    try { frame.contentWindow.focus(); } catch (e) {}
+    // Meldet sich das Spiel nicht bei Canopy (z. B. alte Version ohne Canopy-SDK), würde es hier mit
+    // leerem Spielstand starten. Dann lieber klar sagen, was los ist.
+    setTimeout(() => {
+      if (gameSaidHello || document.getElementById('notLinked')) return;
+      const n = document.createElement('div');
+      n.id = 'notLinked'; n.className = 'toast'; n.style.maxWidth = '420px';
+      n.innerHTML = `<b>${game.title} ist noch nicht mit Canopy verbunden</b>Dein Spielstand wird hier nicht geladen. <a href="${game.url}" target="_blank" rel="noopener" style="color:var(--moss)">Direkt öffnen</a>`;
+      document.body.appendChild(n);
+    }, 10000);
+  });
 }).catch(() => fail('Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.'));
 
 document.getElementById('full').addEventListener('click', () => {

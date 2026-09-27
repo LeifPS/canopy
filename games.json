@@ -33,7 +33,7 @@
         "Handel"
       ],
       "updatedAt": "2026-09-26",
-      "embed": false
+      "embed": true
     },
     {
       "id": "chess-rng",
@@ -67,7 +67,7 @@
         "Rangliste"
       ],
       "updatedAt": null,
-      "embed": false
+      "embed": true
     },
     {
       "id": "cookie-rng",
@@ -83,7 +83,7 @@
         "Sammeln"
       ],
       "updatedAt": null,
-      "embed": false
+      "embed": true
     },
     {
       "id": "ernte-zeit",
@@ -100,7 +100,7 @@
         "Tausch"
       ],
       "updatedAt": "2026-04-29",
-      "embed": false
+      "embed": true
     },
     {
       "id": "snake",
