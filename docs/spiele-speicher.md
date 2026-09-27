@@ -8,7 +8,7 @@ Spielstand wird nie gelöscht**, nur kopiert.
 | Foil Eleven | `LeifPS/foil-xi` | `chess-rng` (Blaze, wird Canopy-Master) | Vereinsname + Passwort (`{club}@foileleven-club.auth`) | Firestore `saves/{clubId}` + `saveHistory`, Datenbank `(default)` |
 | Tierspiel | `LeifPS/tierspiel` | `tierspiel` | eigenes Firebase | Firestore |
 | Chess RNG (`chessrng.web.app`) | `LeifPS/chessrng` | `chessrngreal` (Firebase Hosting) | keins | localStorage `chessrng-player` (Spieler-ID), Online-Partien in Firestore `players`, `games`, `queue`, `results` |
-| Ernte-Zeit (Farm) | `LeifPS/rangspiel` | `rangspiel1` | Profile lokal | localStorage `ernteZeitSave`, `ernteZeitProfileNames`, `ernteZeitActiveProfile` |
+| Ernte-Zeit (Farm, `rangspiel.leifps.workers.dev`) | `LeifPS/rangspiel` | `rangspiel1` | Profile lokal | localStorage `ernteZeitSave`, `ernteZeitProfileNames`, `ernteZeitActiveProfile` |
 | Cookie RNG | `LeifPS/cookierng1` (eine kopierte HTML-Datei, ~6.900 Zeilen) | `rangspiel` (nur Rangliste) | keins | localStorage `cookierng_v1`, dazu `cookierng_settings_v1`, `cookierng_rank_v1` |
 | Cookie RNG II | `LeifPS/cookierng2` | `cookie-rng` (Firebase Hosting) | anonym + Google | localStorage `cookierng2_save_v1` + Firestore `saves/{uid}` (`json`, `at`), Cloud-Sync alle 2–5 Min. |
 
