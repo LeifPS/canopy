@@ -39,6 +39,10 @@ const { doc, getDoc, setDoc, deleteDoc, runTransaction, writeBatch } = require('
   const save = (db, uid) => doc(db, 'saves', uid, 'games', 'snake');
   const ver = (db, uid, v) => doc(db, 'saves', uid, 'games', 'snake', 'versions', v);
   await check('Max speichert eigenen Spielstand', assertSucceeds(setDoc(save(max, 'uMax'), { data: '{}', version: 1 })));
+  await check('Max speichert Version 2 auf Basis von 1', assertSucceeds(setDoc(save(max, 'uMax'), { data: '{"a":2}', version: 2 })));
+  await check('Veraltetes Gerät (wieder Version 2) wird abgelehnt', assertFails(setDoc(save(max, 'uMax'), { data: 'alt', version: 2 })));
+  await check('Versionssprung (Version 9) wird abgelehnt', assertFails(setDoc(save(max, 'uMax'), { data: 'x', version: 9 })));
+  await check('Neuer Spielstand muss mit Version 1 beginnen', assertFails(setDoc(doc(max, 'saves', 'uMax', 'games', 'andres'), { data: 'x', version: 5 })));
   await check('Max legt Version an', assertSucceeds(setDoc(ver(max, 'uMax', '00000001'), { data: '{}', version: 1 })));
   await check('Max überschreibt Version NICHT', assertFails(setDoc(ver(max, 'uMax', '00000001'), { data: 'kaputt', version: 1 })));
   await check('Eva liest Max\' Spielstand NICHT', assertFails(getDoc(save(eva, 'uMax'))));

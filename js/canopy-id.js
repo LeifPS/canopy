@@ -182,11 +182,17 @@ export async function reportScore(gameId, score) {
 // saves/{uid}/games/{gameId} = { data, version, updatedAt }, jede Version zusätzlich unter versions/.
 // Speichern mit veralteter Version schlägt fehl (Konflikt) statt still zu überschreiben.
 
+// Pro Spiel merken wir uns die zuletzt bekannte Cloud-Version und wann die letzte Sicherungskopie war.
+// So braucht Speichern keinen Lesevorgang: Die Firestore-Regeln lassen nur version = alte version + 1 zu.
+// Hat inzwischen ein anderes Gerät gespeichert, lehnen die Regeln ab, und erst dann wird gelesen.
+const saveMeta = new Map(); // gameId -> { version, snapAt }
+
 export async function loadSave(gameId) {
   const user = await ensureUser();
   const snap = await sdk.getDoc(sdk.doc(db, 'saves', user.uid, 'games', gameId));
-  if (!snap.exists()) return { data: null, version: 0 };
+  if (!snap.exists()) { saveMeta.set(gameId, { version: 0, snapAt: 0 }); return { data: null, version: 0 }; }
   const d = snap.data();
+  saveMeta.set(gameId, { version: d.version || 0, snapAt: d.snapAt || 0 });
   return { data: d.data ?? null, version: d.version || 0, updatedAt: d.updatedAt?.toMillis?.() || null };
 }
 
@@ -198,23 +204,43 @@ export async function writeSave(gameId, data, baseVersion) {
   if (text.length > MAX_SAVE_CHARS) throw friendly('save-too-big');
   const ref = sdk.doc(db, 'saves', user.uid, 'games', gameId);
   const versionRef = (v, t) => sdk.doc(db, 'saves', user.uid, 'games', gameId, 'versions', `${String(v).padStart(8, '0')}-${t}`);
-  return sdk.runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
+  const forced = typeof baseVersion !== 'number';
+  const now = Date.now();
+  const batch = sdk.writeBatch(db);
+  let base, snapAt;
+
+  if (forced) {
+    // Ersetzen ohne Abgleich (Übertragen, "force"): aktuellen Stand lesen und als Kopie behalten.
+    const snap = await sdk.getDoc(ref);
     const prev = snap.exists() ? snap.data() : null;
-    const current = prev?.version || 0;
-    if (typeof baseVersion === 'number' && current > baseVersion) {
-      return { ok: false, conflict: true, version: current, data: prev.data ?? null };
-    }
-    const now = Date.now();
-    const forced = typeof baseVersion !== 'number';
-    // Wird ein Stand ersetzt, ohne darauf aufzubauen (Übertragen, "force"), bleibt der alte als Kopie erhalten.
-    if (forced && prev?.data != null) tx.set(versionRef(current, now - 1), { data: prev.data, version: current, updatedAt: sdk.serverTimestamp(), replaced: true });
-    const due = forced || !prev?.snapAt || now - prev.snapAt >= SNAPSHOT_EVERY_MS;
-    const version = current + 1;
-    tx.set(ref, { data: text, version, updatedAt: sdk.serverTimestamp(), snapAt: due ? now : prev.snapAt });
-    if (due) tx.set(versionRef(version, now), { data: text, version, updatedAt: sdk.serverTimestamp() });
-    return { ok: true, version };
-  });
+    base = prev?.version || 0;
+    if (prev?.data != null) batch.set(versionRef(base, now - 1), { data: prev.data, version: base, updatedAt: sdk.serverTimestamp(), replaced: true });
+    snapAt = 0;
+  } else {
+    base = baseVersion;
+    snapAt = saveMeta.get(gameId)?.snapAt || 0;
+  }
+
+  const version = base + 1;
+  const due = forced || now - snapAt >= SNAPSHOT_EVERY_MS;
+  const newSnapAt = due ? now : snapAt;
+  batch.set(ref, { data: text, version, updatedAt: sdk.serverTimestamp(), snapAt: newSnapAt });
+  if (due) batch.set(versionRef(version, now), { data: text, version, updatedAt: sdk.serverTimestamp() });
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    if (e.code !== 'permission-denied' || forced) throw e;
+    // Abgelehnt: vermutlich hat ein anderes Gerät inzwischen gespeichert. Nachsehen.
+    const snap = await sdk.getDoc(ref);
+    const cur = snap.exists() ? snap.data() : null;
+    if (!cur) return writeSave(gameId, text, null); // Stand wurde gelöscht: neu anlegen
+    saveMeta.set(gameId, { version: cur.version || 0, snapAt: cur.snapAt || 0 });
+    if ((cur.version || 0) !== base) return { ok: false, conflict: true, version: cur.version || 0, data: cur.data ?? null };
+    throw e;
+  }
+  saveMeta.set(gameId, { version, snapAt: newSnapAt });
+  return { ok: true, version };
 }
 
 // ---------- Account löschen ----------

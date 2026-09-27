@@ -38,8 +38,14 @@ service cloud.firestore {
 
     // Spielstände: saves/{uid}/games/{gameId}, dazu Versionen, die nie überschrieben werden dürfen
     // (Schutz gegen Datenverlust). Löschen nur durch den Besitzer selbst ("Account löschen").
+    // Jede Speicherung muss genau auf der aktuellen Version aufbauen (version = alt + 1). So kann ein
+    // Gerät mit veraltetem Stand nie still einen neueren überschreiben, ohne dass vorher gelesen werden muss.
+    function nextVersion() {
+      return request.resource.data.version == (resource == null ? 1 : resource.data.version + 1);
+    }
     match /saves/{uid}/games/{gameId} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read, delete: if isOwner(uid) || isAdmin();
+      allow create, update: if (isOwner(uid) && nextVersion()) || isAdmin();
       match /versions/{versionId} {
         allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid);
