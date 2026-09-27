@@ -81,6 +81,8 @@
         return r;
       });
     },
+    /** Eine Canopy-Funktion aufrufen, die für dieses Spiel freigegeben ist (z. B. Foil: foilToken, foilLink). */
+    call: function (name, data) { return request('call', { name: String(name), data: data || null }); },
     /** Wird aufgerufen, sobald Canopy weiß, wer spielt: { name, guest } */
     onUser: function (fn) { listeners.push(fn); },
   };

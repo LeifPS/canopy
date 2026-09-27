@@ -98,6 +98,14 @@ addEventListener('message', async (e) => {
       case 'save':
         reply(m.reqId, true, await id.writeSave(game.id, m.data, m.baseVersion));
         break;
+      case 'call': {
+        // Nur Funktionen, die für genau dieses Spiel freigegeben sind.
+        const allowed = { 'foil-eleven': ['foilToken', 'foilLink'] }[game.id] || [];
+        if (!allowed.includes(m.name)) throw new Error('Diese Funktion ist für dieses Spiel nicht freigegeben.');
+        await id.ensureUser();
+        reply(m.reqId, true, await id.callFunction(m.name, m.data || {}));
+        break;
+      }
     }
   } catch (err) {
     if (m.reqId) reply(m.reqId, false, err.message || 'Fehler');

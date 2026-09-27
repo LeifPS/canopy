@@ -1,0 +1,11 @@
+{
+  "name": "canopy-functions",
+  "private": true,
+  "description": "Cloud Functions von Canopy (Codebase 'canopy', getrennt von Foil Eleven). Deploy NUR mit: firebase deploy --only functions:canopy",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.0"
+  }
+}

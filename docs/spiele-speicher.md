@@ -16,6 +16,8 @@ Spielstand wird nie gelöscht**, nur kopiert.
 
 - **Chess RNG**: umgezogen 27.09. (chessrng PR #1). Läuft im Player, speichert in der Canopy ID, Button „In Canopy ID übertragen“ auf chessrng.web.app. Muster für die anderen localStorage-Spiele: `canopyBoot`/`canopyPush`/`canopyTransfer` in `chessrng/public/index.html`.
 
+- **Foil Eleven**: im Player per Einmal-Login (foil-xi PR, Functions `foilLink`/`foilToken`). Erstes Login im Player verbindet den Verein, danach ohne Passwort.
+
 ## Umzugsweg pro Spiel
 
 - **localStorage-Spiele** (Chess RNG, Ernte-Zeit, Cookie RNG): Button „In Canopy ID übertragen“

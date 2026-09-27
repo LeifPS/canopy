@@ -4,5 +4,17 @@
       "database": "canopy",
       "rules": "firestore.canopy.rules"
     }
+  ],
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "canopy",
+      "runtime": "nodejs20",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log"
+      ]
+    }
   ]
 }

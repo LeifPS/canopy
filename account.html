@@ -202,6 +202,7 @@ function renderProfile(s) {
         <thead><tr><th>Spiel</th><th class="num">Spielzeit</th><th class="num">Rekord</th><th class="num">Runden</th></tr></thead>
         <tbody>${rows.map((r) => `<tr><td>${esc(r.title)}</td><td class="num">${fmtTime(r.playSec)}</td><td class="num">${r.best ?? '–'}</td><td class="num">${r.runs ?? '–'}</td></tr>`).join('')}</tbody>
       </table></div>` : '<p class="muted">Noch keine Spiele gespielt. Starte eins in Canopy Base, dann erscheint es hier.</p>'}
+      <p id="linked" class="muted" style="margin:14px 0 0" hidden></p>
       <div class="row">
         <a class="btn primary" href="./" style="text-decoration:none">Zu den Spielen</a>
         ${google ? '' : `<button class="btn ghost" id="linkGoogle" type="button">${GOOGLE}Google verbinden</button>`}
@@ -218,6 +219,12 @@ function renderProfile(s) {
       </div>
     </section>`;
   const msg = view.querySelector('#msg');
+  id.readPrivate().then((priv) => {
+    const clubs = priv?.foilClubs || [];
+    if (!clubs.length) return;
+    const el = view.querySelector('#linked');
+    if (el) { el.hidden = false; el.innerHTML = `Verbunden mit Foil Eleven: ${clubs.map((c) => `<strong>${esc(c)}</strong>`).join(', ')}`; }
+  }).catch(() => {});
   view.querySelector('#out').addEventListener('click', () => id.logout());
   view.querySelector('#linkGoogle')?.addEventListener('click', async () => {
     try { await id.linkGoogle(); showMsg(msg, 'Google ist jetzt verbunden.', true); } catch (e) { showMsg(msg, e.message); }

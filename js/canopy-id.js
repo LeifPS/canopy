@@ -243,6 +243,30 @@ export async function writeSave(gameId, data, baseVersion) {
   return { ok: true, version };
 }
 
+// ---------- Cloud Functions (Codebase "canopy") ----------
+
+const FUNCTIONS_REGION = 'europe-west3';
+let fnMod = null;
+export async function callFunction(name, data) {
+  await load();
+  if (!fnMod) fnMod = await import(`${FB}/firebase-functions.js`);
+  try {
+    const res = await fnMod.httpsCallable(fnMod.getFunctions(app, FUNCTIONS_REGION), name)(data || {});
+    return res.data;
+  } catch (e) {
+    const err = new Error(e.message || 'Das hat nicht geklappt.');
+    err.code = e.code;
+    throw err;
+  }
+}
+
+export async function readPrivate() {
+  await load();
+  if (!auth.currentUser) return null;
+  const snap = await sdk.getDoc(sdk.doc(db, 'private', auth.currentUser.uid));
+  return snap.exists() ? snap.data() : null;
+}
+
 // ---------- Account löschen ----------
 
 export async function deleteAccount() {

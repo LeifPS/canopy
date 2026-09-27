@@ -57,3 +57,17 @@ npx firebase deploy --only firestore --project chess-rng
 ```
 
 Deployt ausschließlich die Regeln der Datenbank `canopy` (siehe `firebase.json`).
+
+### Cloud Functions (Foil-Login im Player)
+
+Codebase `canopy`, Region `europe-west3`. **Immer mit `functions:canopy` deployen**, sonst könnte die
+CLI die Foil-Funktionen (Codebase `default`) anfassen:
+
+```bash
+node tests/functions.mock.test.js        # Test ohne echtes Firebase
+cd functions && npm install && cd ..
+npx firebase deploy --only functions:canopy --project chess-rng
+```
+
+`foilToken` stellt Einmal-Logins aus (`createCustomToken`). Dafür braucht das Dienstkonto der
+Functions einmalig die Rolle **Ersteller von Dienstkonto-Tokens** (Service Account Token Creator).
