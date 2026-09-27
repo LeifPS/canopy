@@ -329,7 +329,52 @@ export async function sendFeedback(gameId, rating, text) {
 // Pro Spiel merken wir uns die zuletzt bekannte Cloud-Version und wann die letzte Sicherungskopie war.
 // So braucht Speichern keinen Lesevorgang: Die Firestore-Regeln lassen nur version = alte version + 1 zu.
 // Hat inzwischen ein anderes Gerät gespeichert, lehnen die Regeln ab, und erst dann wird gelesen.
-const saveMeta = new Map(); // gameId -> { version, snapAt }
+// ---------- Mehrere Spielstände pro Spiel ----------
+// private/{uid}.slots.{gameId} = { active, next, list: [{ id, name }] }. Spielstand 1 liegt unter der
+// alten Adresse saves/{uid}/games/{gameId}, alle weiteren unter {gameId}~s{id}. So bleiben bestehende
+// Spielstände unverändert "Hauptstand".
+export const saveKey = (gameId, slot) => (!slot || slot === 1 ? gameId : `${gameId}~s${slot}`);
+const DEFAULT_SLOTS = () => ({ active: 1, next: 2, list: [{ id: 1, name: 'Hauptstand' }] });
+
+export async function getSlots(gameId) {
+  await ensureUser();
+  const snap = await sdk.getDoc(sdk.doc(db, 'private', currentUser.uid)).catch(() => null);
+  const s = snap?.exists() ? snap.data().slots?.[gameId] : null;
+  if (!s || !Array.isArray(s.list) || !s.list.length) return DEFAULT_SLOTS();
+  if (!s.list.some((x) => x.id === s.active)) s.active = s.list[0].id;
+  return s;
+}
+async function putSlots(gameId, slots) {
+  await sdk.setDoc(sdk.doc(db, 'private', currentUser.uid), { slots: { [gameId]: slots } }, { merge: true });
+  return slots;
+}
+const cleanSlotName = (n, fallback) => String(n || '').trim().slice(0, 40) || fallback;
+export async function setActiveSlot(gameId, slotId) {
+  const s = await getSlots(gameId);
+  if (!s.list.some((x) => x.id === slotId)) throw friendly('slot-missing');
+  return putSlots(gameId, { ...s, active: slotId });
+}
+export async function createSlot(gameId, name, { activate = true } = {}) {
+  const s = await getSlots(gameId);
+  if (s.list.length >= 10) throw friendly('slot-limit');
+  const id = Math.max(s.next || 2, ...s.list.map((x) => x.id + 1));
+  const list = [...s.list, { id, name: cleanSlotName(name, `Spielstand ${id}`) }];
+  await putSlots(gameId, { list, next: id + 1, active: activate ? id : s.active });
+  return id;
+}
+export async function renameSlot(gameId, slotId, name) {
+  const s = await getSlots(gameId);
+  return putSlots(gameId, { ...s, list: s.list.map((x) => (x.id === slotId ? { ...x, name: cleanSlotName(name, x.name) } : x)) });
+}
+/** Entfernt einen Spielstand aus der Liste. Die Daten bleiben als Sicherung erhalten. */
+export async function removeSlot(gameId, slotId) {
+  const s = await getSlots(gameId);
+  if (s.list.length <= 1) throw friendly('slot-last');
+  const list = s.list.filter((x) => x.id !== slotId);
+  return putSlots(gameId, { ...s, list, active: s.active === slotId ? list[0].id : s.active });
+}
+
+const saveMeta = new Map(); // Speicher-Adresse -> { version, snapAt }
 
 export async function loadSave(gameId) {
   const user = await ensureUser();
@@ -424,6 +469,8 @@ export async function deleteAccount() {
     for (const v of versions.docs) await sdk.deleteDoc(v.ref);
     await sdk.deleteDoc(g.ref);
   }
+  const fr = await sdk.getDocs(sdk.query(sdk.collection(db, 'friendships'), sdk.where('members', 'array-contains', uid))).catch(() => null);
+  for (const f of fr?.docs || []) await sdk.deleteDoc(f.ref).catch(() => {});
   const name = currentProfile?.name;
   if (name) await sdk.deleteDoc(sdk.doc(db, 'usernames', name)).catch(() => {});
   await sdk.deleteDoc(sdk.doc(db, 'profiles', uid)).catch(() => {});
@@ -458,6 +505,9 @@ const MESSAGES = {
   'friend-self': 'Das bist du selbst.',
   'friend-already': 'Ihr seid schon befreundet.',
   'friend-pending': 'Die Anfrage läuft schon. Warte, bis sie angenommen wird.',
+  'slot-missing': 'Diesen Spielstand gibt es nicht mehr.',
+  'slot-limit': 'Mehr als 10 Spielstände pro Spiel gehen nicht.',
+  'slot-last': 'Der letzte Spielstand kann nicht entfernt werden.',
   'save-too-big': 'Der Spielstand ist zu groß zum Hochladen.',
   'not-signed-in': 'Du bist nicht angemeldet.',
 };

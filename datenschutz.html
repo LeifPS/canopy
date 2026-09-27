@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Datenschutz · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/canopy.css">
+</head>
+<body>
+<main class="wrap" style="max-width:760px">
+  <div class="eyebrow">Canopy</div>
+  <h1>Datenschutz</h1>
+  <p class="lead">Kurz und ehrlich: welche Daten Canopy speichert, wofür, und wie du sie wieder loswirst.</p>
+  <div class="stack">
+    <section class="panel">
+      <h2>Was gespeichert wird</h2>
+      <ul class="muted" style="margin:0;padding-left:18px;display:grid;gap:6px">
+        <li><b style="color:var(--ink)">Dein Account:</b> Nutzername und Passwort (verschlüsselt bei Google Firebase). Wir speichern keine E-Mail-Adresse. Meldest du dich mit Google an, kennt Firebase dein Google-Konto.</li>
+        <li><b style="color:var(--ink)">Öffentliches Profil:</b> Nutzername, Spielzeit, Rekorde, Achievements, Level und wann du zuletzt aktiv warst. Das sehen andere Spieler in Bestenlisten und auf deinem Profil.</li>
+        <li><b style="color:var(--ink)">Spielstände:</b> deine Spielstände aus den Spielen, damit du auf jedem Gerät weiterspielen kannst. Nur du kannst sie lesen.</li>
+        <li><b style="color:var(--ink)">Freunde:</b> wen du als Freund hinzugefügt hast. Das sehen nur du und die jeweilige Person.</li>
+        <li><b style="color:var(--ink)">Feedback:</b> was du über den Feedback-Knopf schickst, dazu dein Nutzername und dein Browser-Typ.</li>
+        <li><b style="color:var(--ink)">Gäste:</b> Wer ohne Account spielt, bekommt einen anonymen Gast-Account ohne Namen. Er taucht nicht in Bestenlisten auf.</li>
+      </ul>
+    </section>
+    <section class="panel">
+      <h2>Wo die Daten liegen</h2>
+      <p class="muted" style="margin:0">Bei Google Firebase (Authentication und Firestore). Die Webseite selbst wird über Cloudflare ausgeliefert. Für die Neuigkeiten fragt dein Browser öffentliche Daten bei GitHub ab, Schriften kommen von Google Fonts. Es gibt keine Werbung und kein Tracking.</p>
+    </section>
+    <section class="panel">
+      <h2>Löschen</h2>
+      <p class="muted" style="margin:0 0 12px">Auf deiner Account-Seite kannst du deinen Account jederzeit selbst löschen. Dabei werden Profil, Statistik, Spielstände und Freundschaften entfernt. Spielstände, die direkt in einem Spiel auf deinem Gerät liegen, bleiben dort.</p>
+      <a class="btn" href="account.html">Zur Account-Seite</a>
+    </section>
+    <p class="muted" style="font-size:13px">Fragen zum Datenschutz? Schreib über den Feedback-Knopf im Spiel. Diese Seite ist eine Übersicht und ersetzt keine Rechtsberatung.</p>
+  </div>
+</main>
+<script type="module">
+import { mountHeader } from './js/shell.js';
+mountHeader('');
+</script>
+</body>
+</html>

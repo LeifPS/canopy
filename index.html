@@ -218,7 +218,7 @@
 <footer>
   <div class="wrap">
     <span>© <span id="year"></span> Canopy Games</span>
-    <span>Canopy Base · Canopy ID</span>
+    <span><a href="datenschutz.html">Datenschutz</a> · <a href="news.html">Neuigkeiten</a></span>
   </div>
 </footer>
 
@@ -350,17 +350,21 @@
 
   // Letztes Update live von GitHub holen: letzter Commit auf dem Hauptzweig (öffentliche Repos). Klappt das nicht, bleibt der Wert aus games.json.
   async function refreshFromGitHub() {
-    const withRepo = games.filter((g) => g.repo);
-    const results = await Promise.allSettled(withRepo.map((g) =>
-      fetch(`https://api.github.com/repos/${g.repo}/commits?per_page=1`).then((r) => r.ok ? r.json() : Promise.reject(r.status))));
+    // Ergebnis 20 Min. im Browser merken: GitHub erlaubt ohne Anmeldung nur 60 Anfragen pro Stunde.
+    const KEY = 'canopy-gh-dates-v1', TTL = 20 * 60 * 1000;
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+    let dates = cache && Date.now() - cache.at < TTL ? cache.dates : null;
+    if (!dates) {
+      const withRepo = games.filter((g) => g.repo);
+      const results = await Promise.allSettled(withRepo.map((g) =>
+        fetch(`https://api.github.com/repos/${g.repo}/commits?per_page=1`).then((r) => r.ok ? r.json() : Promise.reject(r.status))));
+      dates = {};
+      results.forEach((r, i) => { const d = r.status === 'fulfilled' && r.value[0]?.commit?.committer?.date; if (d) dates[withRepo[i].repo] = d.slice(0, 10); });
+      if (Object.keys(dates).length) { try { localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), dates })); } catch (e) {} }
+    }
     let changed = false;
-    results.forEach((r, i) => {
-      const date = r.status === 'fulfilled' && r.value[0]?.commit?.committer?.date;
-      if (date) {
-        const d = date.slice(0, 10);
-        if (d !== withRepo[i].updatedAt) { withRepo[i].updatedAt = d; changed = true; }
-      }
-    });
+    for (const g of games) if (g.repo && dates[g.repo] && dates[g.repo] !== g.updatedAt) { g.updatedAt = dates[g.repo]; changed = true; }
     if (changed) renderAll();
   }
 

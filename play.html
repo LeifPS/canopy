@@ -31,7 +31,7 @@
   iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
   .msg { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 16px; color: var(--muted); }
   .msg a { color: var(--moss); }
-  @media (max-width: 620px) { .back span, .sep, #direct { display: none; } }
+  @media (max-width: 620px) { .back span, .sep, #direct, #fbBtn { display: none; } #slotBtn { max-width: 150px; } .slotmenu { position: fixed; left: 12px; right: 12px; top: 56px; width: auto; } }
   .toast { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; background: #15201B; color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--sun); border-radius: 12px; padding: 10px 14px; font: 500 14px var(--body); box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: min(360px, calc(100vw - 32px)); animation: pop .25s ease; }
   .toast b { display: block; font: 700 15px var(--display); }
   @keyframes pop { from { transform: translateY(10px); opacity: 0; } }
@@ -44,6 +44,19 @@
   .stars button { font: 700 14px var(--body); width: 40px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
   .stars button[aria-pressed="true"] { background: var(--moss); color: #0F1513; border-color: transparent; }
   dialog textarea { width: 100%; min-height: 110px; font: 15px var(--body); color: var(--ink); background: #111A16; border: 1px solid var(--line); border-radius: 10px; padding: 10px; resize: vertical; }
+  .slotwrap { position: relative; }
+  #slotBtn { max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
+  .slotmenu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: 280px; background: #161F1B; border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  .slotmenu .it { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font: 500 14px var(--body); color: var(--ink); background: none; border: 0; border-radius: 9px; padding: 8px 10px; cursor: pointer; }
+  .slotmenu .it:hover, .slotmenu .it:focus-visible { background: #1F2A25; }
+  .slotmenu .it[aria-checked="true"]::before { content: "●"; color: var(--moss); }
+  .slotmenu .it[aria-checked="false"]::before { content: "○"; color: var(--muted); }
+  .slotmenu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+  .slotmenu .act { color: var(--moss); font-weight: 600; }
+  .slotmenu form { display: flex; gap: 6px; padding: 4px; }
+  .slotmenu input { flex: 1; min-width: 0; font: 14px var(--body); color: var(--ink); background: #111A16; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; }
+  .slotmenu .hint { font-size: 12px; color: var(--muted); padding: 4px 10px 2px; }
+  .cover { position: absolute; inset: 0; display: grid; place-content: center; background: rgba(15,21,19,.85); color: var(--ink); font: 600 15px var(--body); z-index: 5; }
   dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 </style>
 </head>
@@ -56,6 +69,10 @@
     <div class="sep"></div>
     <div class="title" id="title">Wird geladen</div>
     <div class="spacer"></div>
+    <div class="slotwrap" id="slotWrap" hidden>
+      <button class="tool" id="slotBtn" type="button" aria-haspopup="true" aria-expanded="false">Spielstand</button>
+      <div class="slotmenu" id="slotMenu" hidden></div>
+    </div>
     <a class="tool" id="who" hidden></a>
     <a class="tool" id="direct" target="_blank" rel="noopener" hidden>In neuem Tab</a>
     <button class="tool" id="fbBtn" type="button">Feedback</button>
@@ -80,6 +97,79 @@ const gameKey = new URLSearchParams(location.search).get('g');
 const stage = document.getElementById('stage');
 const fail = (text) => { stage.innerHTML = `<div class="msg"><p>${text}</p><p><a href="./">Zurück zu allen Spielen</a></p></div>`; };
 let frame = null, game = null, origin = '*', gameSaidHello = false;
+
+// ---------- Mehrere Spielstände ----------
+let slots = { active: 1, list: [{ id: 1, name: 'Hauptstand' }] };
+let slotsReady = Promise.resolve();
+const flushWait = {};
+let switching = false; // während eines Wechsels keine Speicherungen des alten Spiels annehmen
+const slotName = () => slots.list.find((x) => x.id === slots.active)?.name || 'Hauptstand';
+function askFlush() {
+  // Spiel bitten, ungespeicherte Änderungen hochzuladen (höchstens 5 s warten).
+  const reqId = 'f' + Date.now();
+  return new Promise((res) => { flushWait[reqId] = res; send({ type: 'flush', reqId }); setTimeout(res, 5000); });
+}
+function renderSlotBtn() {
+  const b = document.getElementById('slotBtn');
+  b.textContent = `${slotName()} ▾`;
+  b.title = 'Spielstand wechseln';
+}
+function closeSlotMenu() { document.getElementById('slotMenu').hidden = true; document.getElementById('slotBtn').setAttribute('aria-expanded', 'false'); }
+function renderSlotMenu(mode) {
+  const menu = document.getElementById('slotMenu');
+  const escH = (x) => String(x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  if (mode === 'new' || mode === 'rename') {
+    menu.innerHTML = `<div class="hint">${mode === 'new' ? 'Neuer, leerer Spielstand' : 'Spielstand umbenennen'}</div>
+      <form id="slotForm"><input id="slotName" maxlength="40" value="${mode === 'rename' ? escH(slotName()) : ''}" placeholder="Name, z. B. Handy" aria-label="Name"><button class="tool" type="submit">OK</button></form>`;
+    const f = menu.querySelector('#slotForm');
+    menu.querySelector('#slotName').focus();
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = menu.querySelector('#slotName').value;
+      closeSlotMenu();
+      if (mode === 'new') await switchSlot(null, name); else { slots = await id.renameSlot(game.id, slots.active, name); renderSlotBtn(); }
+    });
+    return;
+  }
+  menu.innerHTML = slots.list.map((x) => `<button class="it" role="menuitemradio" aria-checked="${x.id === slots.active}" data-slot="${x.id}">${escH(x.name)}</button>`).join('') +
+    `<hr><button class="it act" data-act="new">+ Neuer Spielstand</button><button class="it act" data-act="rename">Umbenennen</button>` +
+    (slots.list.length > 1 ? `<button class="it act" data-act="remove" style="color:#E3735F">„${escH(slotName())}“ entfernen</button>` : '') +
+    `<div class="hint">Bestehende Spielstände von anderen Geräten holst du über „In Canopy ID übertragen“ auf der Spielseite.</div>`;
+}
+async function switchSlot(slotId, newName) {
+  const cover = document.createElement('div'); cover.className = 'cover'; cover.textContent = 'Spielstand wird gewechselt …';
+  stage.appendChild(cover);
+  try {
+    await askFlush();
+    switching = true;
+    if (slotId == null) { await id.createSlot(game.id, newName); }
+    else await id.setActiveSlot(game.id, slotId);
+    slots = await id.getSlots(game.id);
+    renderSlotBtn();
+    gameSaidHello = false;
+    frame.src = frame.src; // Spiel neu laden, es holt sich den neuen Spielstand
+  } catch (e) { switching = false; toast(`<b>Das hat nicht geklappt</b>${e.message}`); }
+  finally { setTimeout(() => cover.remove(), 400); }
+}
+document.getElementById('slotBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = document.getElementById('slotMenu');
+  if (!menu.hidden) return closeSlotMenu();
+  renderSlotMenu(); menu.hidden = false; e.currentTarget.setAttribute('aria-expanded', 'true');
+});
+document.getElementById('slotMenu').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-slot],[data-act]'); if (!b) return;
+  if (b.dataset.slot) { const sid = +b.dataset.slot; closeSlotMenu(); if (sid !== slots.active) switchSlot(sid); return; }
+  if (b.dataset.act === 'new') return renderSlotMenu('new');
+  if (b.dataset.act === 'rename') return renderSlotMenu('rename');
+  if (b.dataset.act === 'remove') {
+    if (b.dataset.sure) { closeSlotMenu(); const gone = slots.active; await askFlush(); switching = true; slots = await id.removeSlot(game.id, gone); renderSlotBtn(); gameSaidHello = false; frame.src = frame.src; toast('<b>Spielstand entfernt</b>Er bleibt als Sicherung gespeichert und kann wiederhergestellt werden.'); }
+    else { b.dataset.sure = '1'; b.textContent = 'Wirklich entfernen? Nochmal klicken'; }
+  }
+});
+document.addEventListener('click', closeSlotMenu);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSlotMenu(); });
 
 // Wer spielt, oben rechts anzeigen
 const who = document.getElementById('who');
@@ -110,18 +200,26 @@ addEventListener('message', async (e) => {
   try {
     switch (m.type) {
       case 'ready':
-        gameSaidHello = true; document.getElementById('notLinked')?.remove();
+        gameSaidHello = true; switching = false; document.getElementById('notLinked')?.remove();
         playing = true; lastTick = performance.now();
         id.ensureUser().then(() => { const s = id.state(); send({ type: 'user', user: { name: s.name, guest: s.isGuest } }); }).catch(() => {});
         break;
       case 'score':
         await id.ensureUser(); await id.reportScore(game.id, m.score);
         break;
-      case 'load':
-        reply(m.reqId, true, await id.loadSave(game.id));
+      case 'load': {
+        await slotsReady;
+        const r = await id.loadSave(id.saveKey(game.id, slots.active));
+        reply(m.reqId, true, { ...r, slot: slots.active, slotName: slotName() });
+        break;
+      }
+      case 'flushed':
+        if (flushWait[m.reqId]) { flushWait[m.reqId](); delete flushWait[m.reqId]; }
         break;
       case 'save':
-        reply(m.reqId, true, await id.writeSave(game.id, m.data, m.baseVersion));
+        await slotsReady;
+        if (switching) { reply(m.reqId, false, 'Spielstand wird gerade gewechselt.'); break; }
+        reply(m.reqId, true, await id.writeSave(id.saveKey(game.id, slots.active), m.data, m.baseVersion));
         break;
       case 'call': {
         // Nur Funktionen, die für genau dieses Spiel freigegeben sind.
@@ -166,6 +264,9 @@ fetch('games.json').then((r) => r.json()).then(({ games }) => {
   game = (games || []).find((x) => x.id === gameKey);
   if (!game || !game.url) return fail('Dieses Spiel gibt es nicht.');
   if (!game.embed) { location.replace(game.url); return; } // noch nicht Canopy-fähig: direkt öffnen
+  if (game.slots) {
+    slotsReady = id.getSlots(game.id).then((x) => { slots = x; renderSlotBtn(); document.getElementById('slotWrap').hidden = false; }).catch(() => {});
+  }
   document.title = `${game.title} · Canopy Base`;
   document.getElementById('title').textContent = game.title;
   const direct = document.getElementById('direct');

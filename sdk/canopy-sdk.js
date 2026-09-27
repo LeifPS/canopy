@@ -9,6 +9,9 @@
  *   Canopy.score(1250);                            // Ergebnis einer Runde (für Rekorde)
  *   Canopy.event('level_complete', { level: 3 });  // für spätere Achievements
  *
+ * Mehrere Spielstände: Canopy entscheidet, welcher Spielstand aktiv ist. load() liefert dazu slot
+ * (1 = Hauptstand). Vor einem Wechsel ruft Canopy den mit onFlush() gesetzten Handler auf.
+ *
  * Läuft das Spiel nicht in Canopy Base (Canopy.inHub === false), passiert nichts und
  * load() liefert { data: null }. Das Spiel speichert dann wie bisher nur lokal.
  *
@@ -26,6 +29,7 @@
   var seq = 0;
   var pending = {};
   var listeners = [];
+  var flushHandler = null;
 
   function post(msg) {
     if (!inHub) return;
@@ -52,6 +56,10 @@
     if (!m || m.canopy !== 1) return;
     if (m.type === 'reply' && pending[m.reqId]) { var fn = pending[m.reqId]; delete pending[m.reqId]; fn(m); }
     if (m.type === 'user') listeners.forEach(function (fn) { try { fn(m.user); } catch (err) {} });
+    // Canopy will gleich den Spielstand wechseln: vorher alles hochladen.
+    if (m.type === 'flush') {
+      Promise.resolve(flushHandler ? flushHandler() : null).catch(function () {}).then(function () { post({ type: 'flushed', reqId: m.reqId }); });
+    }
   });
 
   window.Canopy = {
@@ -65,7 +73,7 @@
         version = r.version || 0;
         var data = r.data;
         try { data = data == null ? null : JSON.parse(data); } catch (err) {}
-        return { data: data, version: version };
+        return { data: data, version: version, slot: r.slot || 1, slotName: r.slotName || null };
       });
     },
     save: function (data, opts) {
@@ -83,6 +91,8 @@
     },
     /** Eine Canopy-Funktion aufrufen, die für dieses Spiel freigegeben ist (z. B. Foil: foilToken, foilLink). */
     call: function (name, data) { return request('call', { name: String(name), data: data || null }); },
+    /** fn() wird vor einem Spielstand-Wechsel aufgerufen und soll ungespeicherte Änderungen hochladen (Promise). */
+    onFlush: function (fn) { flushHandler = fn; },
     /** Wird aufgerufen, sobald Canopy weiß, wer spielt: { name, guest } */
     onUser: function (fn) { listeners.push(fn); },
   };

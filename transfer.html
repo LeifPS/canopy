@@ -22,6 +22,7 @@
   .btn[disabled] { opacity: .6; cursor: progress; }
   .row { display: flex; flex-wrap: wrap; gap: 10px; }
   .err { color: var(--danger); }
+  .muted { color: var(--muted); }
   :focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
 </style>
 </head>
@@ -57,21 +58,33 @@ async function step() {
     return;
   }
   if (!incoming) return view(`<h1>${esc(game.title)}</h1><p>Warte auf den Spielstand aus dem Spiel … Lass das Spiel-Fenster geöffnet.</p>`);
+  let slots = null;
+  if (game.slots) { try { slots = await id.getSlots(game.id); } catch (e) {} }
+  const activeName = slots ? (slots.list.find((x) => x.id === slots.active)?.name || 'Hauptstand') : null;
   let cloud;
-  try { cloud = await id.loadSave(game.id); } catch (e) { return view(`<h1>Das hat nicht geklappt</h1><p class="err">${esc(e.message)}</p>`); }
+  try { cloud = await id.loadSave(id.saveKey(game.id, slots ? slots.active : 1)); } catch (e) { return view(`<h1>Das hat nicht geklappt</h1><p class="err">${esc(e.message)}</p>`); }
   const kb = Math.max(1, Math.round(incoming.length / 1024));
+  const today = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(new Date());
   view(`<h1>${esc(game.title)} übertragen</h1>
     <p>Angemeldet als <strong>${esc(s.name)}</strong>. Dein Spielstand (${kb} KB) wird in deine Canopy ID kopiert. Im Spiel selbst bleibt er unverändert.</p>
-    ${cloud.data ? '<p class="err">In deinem Account liegt schon ein Spielstand für dieses Spiel. Er wird ersetzt, bleibt aber als ältere Version gespeichert.</p>' : ''}
+    ${slots ? `<fieldset style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:8px;margin:0">
+      <legend class="muted" style="padding:0 4px;font-size:13px">Wohin?</legend>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input type="radio" name="dest" value="new" ${cloud.data ? 'checked' : ''}> <span>Als <b>neuen Spielstand</b> anlegen<br><input id="newName" maxlength="40" value="Übertragen ${esc(today)}" aria-label="Name des neuen Spielstands" style="margin-top:6px;font:14px var(--body);color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%"></span></label>
+      <label style="display:flex;gap:8px;align-items:flex-start"><input type="radio" name="dest" value="active" ${cloud.data ? '' : 'checked'}> <span>In „<b>${esc(activeName)}</b>“${cloud.data ? ' (ersetzt ihn, der alte bleibt als Sicherung)' : ''}</span></label>
+    </fieldset>` : (cloud.data ? '<p class="err">In deinem Account liegt schon ein Spielstand für dieses Spiel. Er wird ersetzt, bleibt aber als ältere Version gespeichert.</p>' : '')}
     <div class="row"><button class="btn primary" id="go">Jetzt übertragen</button><button class="btn" id="no">Abbrechen</button></div>
     <p id="msg"></p>`);
   document.getElementById('no').addEventListener('click', () => window.close());
   document.getElementById('go').addEventListener('click', async (e) => {
     e.target.disabled = true;
     try {
-      const r = await id.writeSave(game.id, incoming, null);
+      let slot = slots ? slots.active : 1;
+      const dest = document.querySelector('input[name="dest"]:checked')?.value;
+      if (slots && dest === 'new') slot = await id.createSlot(game.id, document.getElementById('newName').value, { activate: true });
+      else if (slots) await id.setActiveSlot(game.id, slot);
+      const r = await id.writeSave(id.saveKey(game.id, slot), incoming, null);
       tell({ type: 'transfer-done', version: r.version });
-      view(`<h1>Fertig ✓</h1><p>Dein Spielstand ist jetzt in deiner Canopy ID. Spiel ${esc(game.title)} ab sofort in Canopy Base weiter, dann ist er auf jedem Gerät da.</p>
+      view(`<h1>Fertig ✓</h1><p>Dein Spielstand ist jetzt in deiner Canopy ID${slots ? ' und als aktiver Spielstand ausgewählt' : ''}. Spiel ${esc(game.title)} ab sofort in Canopy Base weiter, dann ist er auf jedem Gerät da.</p>
         <div class="row"><a class="btn primary" href="play.html?g=${encodeURIComponent(game.id)}">In Canopy Base spielen</a><button class="btn" onclick="window.close()">Fenster schließen</button></div>`);
     } catch (err) {
       e.target.disabled = false;

@@ -27,7 +27,7 @@ const games = await loadGames();
 const sources = games.filter((g) => g.repo).map((g) => ({ id: g.id, title: g.title, repo: g.repo, color: g.color }))
   .concat([{ id: 'canopy', title: 'Canopy', repo: 'LeifPS/canopy', color: '#2E6A4E' }]);
 let filter = new URLSearchParams(location.search).get('g') || '';
-const CACHE = 'canopy-news-v1', TTL = 10 * 60 * 1000;
+const CACHE = 'canopy-news-v1', TTL = 20 * 60 * 1000; // GitHub: max. 60 Anfragen/Stunde ohne Anmeldung
 
 // Commit-Nachricht in eine lesbare Zeile verwandeln. Merge-Commits tragen den PR-Titel in Zeile 3.
 function headline(msg) {
@@ -38,7 +38,7 @@ function headline(msg) {
 }
 
 async function fetchAll() {
-  try { const c = JSON.parse(sessionStorage.getItem(CACHE) || 'null'); if (c && Date.now() - c.at < TTL) return c.items; } catch (e) {}
+  try { const c = JSON.parse(localStorage.getItem(CACHE) || 'null'); if (c && Date.now() - c.at < TTL) return c.items; } catch (e) {}
   const res = await Promise.allSettled(sources.map((s) =>
     fetch(`https://api.github.com/repos/${s.repo}/commits?per_page=20`).then((r) => r.ok ? r.json() : Promise.reject(r.status))
       .then((list) => list.map((c) => ({ src: s.id, t: Date.parse(c.commit.committer.date), text: headline(c.commit.message), sha: c.sha, url: c.html_url })))));
@@ -47,7 +47,7 @@ async function fetchAll() {
   // Gleiche Zeile am selben Tag im selben Spiel nur einmal (PR-Titel + Commit)
   const seen = new Set();
   const dedup = items.filter((x) => { const k = x.src + new Date(x.t).toDateString() + x.text; if (seen.has(k)) return false; seen.add(k); return true; });
-  try { sessionStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), items: dedup })); } catch (e) {}
+  try { localStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), items: dedup })); } catch (e) {}
   return dedup;
 }
 

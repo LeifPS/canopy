@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele. embed: true = läuft im Canopy-Player (iFrame). Erst einschalten, wenn das Spiel seinen Spielstand über Canopy ID lädt. scoreLabel: Spiel meldet Rekorde (Canopy.score), Bestenliste zeigt dann auch Rekorde.",
+  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele. embed: true = läuft im Canopy-Player (iFrame). Erst einschalten, wenn das Spiel seinen Spielstand über Canopy ID lädt. scoreLabel: Spiel meldet Rekorde (Canopy.score), Bestenliste zeigt dann auch Rekorde. slots: true = mehrere Spielstände pro Spiel (Spiel nutzt die Canopy-Brücke).",
   "games": [
     {
       "id": "foil-eleven",
@@ -16,7 +16,8 @@
         "Liga"
       ],
       "updatedAt": "2026-09-24",
-      "embed": true
+      "embed": true,
+      "slots": false
     },
     {
       "id": "tierspiel",
@@ -33,7 +34,8 @@
         "Handel"
       ],
       "updatedAt": "2026-09-26",
-      "embed": true
+      "embed": true,
+      "slots": true
     },
     {
       "id": "chess-rng",
@@ -50,7 +52,8 @@
         "Rangliste"
       ],
       "updatedAt": "2026-09-25",
-      "embed": true
+      "embed": true,
+      "slots": true
     },
     {
       "id": "cookie-rng-2",
@@ -67,7 +70,8 @@
         "Rangliste"
       ],
       "updatedAt": null,
-      "embed": true
+      "embed": true,
+      "slots": true
     },
     {
       "id": "cookie-rng",
@@ -83,7 +87,8 @@
         "Sammeln"
       ],
       "updatedAt": null,
-      "embed": true
+      "embed": true,
+      "slots": true
     },
     {
       "id": "ernte-zeit",
@@ -100,7 +105,8 @@
         "Tausch"
       ],
       "updatedAt": "2026-04-29",
-      "embed": true
+      "embed": true,
+      "slots": true
     },
     {
       "id": "snake",
@@ -117,7 +123,8 @@
       ],
       "updatedAt": "2026-09-27",
       "embed": true,
-      "scoreLabel": "Punkte"
+      "scoreLabel": "Punkte",
+      "slots": false
     }
   ]
 }

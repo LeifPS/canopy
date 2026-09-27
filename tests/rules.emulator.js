@@ -31,6 +31,8 @@ const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, query, where, collec
   await check('Eva kann sich nicht "max" als Profilnamen geben', assertFails(setDoc(doc(eva, 'profiles', 'uEva'), { name: 'max' })));
   await check('Ungültiger Name "Max!" wird abgelehnt', assertFails(setDoc(doc(eva, 'usernames', 'Max!'), { uid: 'uEva' })));
   await check('Max aktualisiert Spielzeit (Name bleibt)', assertSucceeds(setDoc(doc(max, 'profiles', 'uMax'), { games: { snake: { playSec: 60 } } }, { merge: true })));
+  await check('Normale Spielzeit (60 s) erlaubt', assertSucceeds(setDoc(doc(max, 'profiles', 'uMax'), { totalSec: 60 }, { merge: true })));
+  await check('Spielzeit-Sprung (+100 Std.) abgelehnt', assertFails(setDoc(doc(max, 'profiles', 'uMax'), { totalSec: 360060 }, { merge: true })));
   await check('Eva schreibt NICHT in Max\' Profil', assertFails(setDoc(doc(eva, 'profiles', 'uMax'), { games: {} }, { merge: true })));
   await check('Jeder liest Profile', assertSucceeds(getDoc(doc(nobody, 'profiles', 'uMax'))));
   await check('Gast legt Profil ohne Namen an (Statistik)', assertSucceeds(setDoc(doc(guest, 'profiles', 'uGuest'), { games: { snake: { best: 3 } } }, { merge: true })));
