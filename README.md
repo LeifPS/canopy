@@ -20,6 +20,8 @@ python3 -m http.server 8000
 
 ## Hosting
 
+Live: **https://canopybase.pages.dev** (Cloudflare Pages, deployt automatisch von `main`).
+
 Statische Seite, z. B. über Cloudflare Pages wie die anderen Spiele (kein Build-Schritt,
 Ausgabeordner `/`).
 
