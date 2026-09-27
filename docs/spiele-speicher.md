@@ -21,6 +21,8 @@ Spielstand wird nie gelöscht**, nur kopiert.
 - **Tierspiel, Ernte-Zeit, Cookie RNG, Cookie RNG II**: Canopy-Brücke (`sdk/canopy-bridge.js`) eingebaut (je PR `canopy/bridge`). `embed` in games.json erst nach dem Deploy einschalten.
 - Neue localStorage-Spiele: nur die Brücke einbinden, siehe Kopf von `sdk/canopy-bridge.js`.
 
+- **Mehrere Spielstände** (27.09.): `slots: true` in games.json, Daten unter `{gameId}~s{n}`, Liste in `private/{uid}.slots`. Chess RNG erst nach Deploy von chessrng PR #5 einschalten.
+
 ## Umzugsweg pro Spiel
 
 - **localStorage-Spiele** (Chess RNG, Ernte-Zeit, Cookie RNG): Button „In Canopy ID übertragen“

@@ -53,7 +53,7 @@
       ],
       "updatedAt": "2026-09-25",
       "embed": true,
-      "slots": true
+      "slots": false
     },
     {
       "id": "cookie-rng-2",
