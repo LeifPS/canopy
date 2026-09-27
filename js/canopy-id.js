@@ -2,6 +2,7 @@
 // Login per Nutzername + Passwort (intern {name}@canopy-id.auth, keine echte E-Mail),
 // per Google, oder als Gast (anonym, lässt sich später in einen richtigen Account umwandeln).
 import { firebaseConfig, CANOPY_DB, FB } from './firebase-config.js';
+import { newlyUnlocked, nextStreak, localDay } from './progress.js';
 
 const ID_DOMAIN = '@canopy-id.auth';
 export const NAME_RULE = /^[a-z0-9_]{3,20}$/;
@@ -157,25 +158,168 @@ export async function logout() { await load(); await sdk.signOut(auth); }
 
 // ---------- Statistik (Spielzeit, Rekorde) ----------
 
+// Alle Spiele, die für "Komplettist" zählen (setzt der Player aus games.json).
+let allGameIds = [];
+export function setGameIds(ids) { allGameIds = ids || []; }
+const achListeners = new Set();
+/** fn(achievement) wird aufgerufen, wenn gerade ein Achievement freigeschaltet wurde. */
+export function onAchievement(fn) { achListeners.add(fn); return () => achListeners.delete(fn); }
+
+// Lokale Kopie des eigenen Profils nach einem Schreibvorgang nachführen (spart einen Lesevorgang).
+function patchLocal(patch) {
+  const p = currentProfile || {};
+  const games = { ...(p.games || {}) };
+  for (const [g, v] of Object.entries(patch.games || {})) games[g] = { ...(games[g] || {}), ...v };
+  currentProfile = { ...p, ...patch, games };
+}
+
+async function checkAchievements(extra = {}) {
+  if (!currentUser || !currentProfile?.name) return; // nur echte Accounts, keine Gäste
+  const fresh = newlyUnlocked(currentProfile, { allGameIds, ...extra });
+  if (!fresh.length) return;
+  const now = Date.now();
+  const add = {}; for (const a of fresh) add[a.id] = now;
+  await sdk.setDoc(sdk.doc(db, 'profiles', currentUser.uid), { achievements: add }, { merge: true });
+  currentProfile = { ...currentProfile, achievements: { ...(currentProfile.achievements || {}), ...add } };
+  for (const a of fresh) for (const fn of achListeners) { try { fn(a); } catch (e) {} }
+  emit();
+}
+
 export async function addPlaytime(gameId, seconds) {
   if (!currentUser || seconds <= 0) return;
+  const sec = Math.round(seconds);
+  const streak = nextStreak(currentProfile?.streak, localDay());
+  const night = new Date().getHours() < 4;
+  const patch = { streak, lastGame: gameId };
+  if (night) patch.nightPlay = true;
   await sdk.setDoc(sdk.doc(db, 'profiles', currentUser.uid), {
-    games: { [gameId]: { playSec: sdk.increment(Math.round(seconds)), lastPlayed: sdk.serverTimestamp() } },
+    ...patch,
+    totalSec: sdk.increment(sec),
+    lastSeen: sdk.serverTimestamp(),
+    games: { [gameId]: { playSec: sdk.increment(sec), lastPlayed: sdk.serverTimestamp() } },
   }, { merge: true });
+  const g = currentProfile?.games?.[gameId] || {};
+  patchLocal({ ...patch, totalSec: (currentProfile?.totalSec || 0) + sec,
+    games: { [gameId]: { playSec: (g.playSec || 0) + sec, lastPlayed: { toMillis: () => Date.now() } } } });
+  await checkAchievements();
 }
 
 export async function reportScore(gameId, score) {
   if (!currentUser || typeof score !== 'number' || !isFinite(score)) return false;
   const ref = sdk.doc(db, 'profiles', currentUser.uid);
-  let record = false;
+  let record = false, best;
   await sdk.runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const best = snap.exists() ? snap.data().games?.[gameId]?.best : undefined;
+    best = snap.exists() ? snap.data().games?.[gameId]?.best : undefined;
     const g = { runs: sdk.increment(1), lastPlayed: sdk.serverTimestamp() };
-    if (best === undefined || score > best) { g.best = score; record = true; }
-    tx.set(ref, { games: { [gameId]: g } }, { merge: true });
+    if (best === undefined || score > best) { g.best = score; g.bestAt = sdk.serverTimestamp(); record = true; }
+    tx.set(ref, { lastGame: gameId, games: { [gameId]: g } }, { merge: true });
   });
+  const old = currentProfile?.games?.[gameId] || {};
+  patchLocal({ lastGame: gameId, games: { [gameId]: { runs: (old.runs || 0) + 1, ...(record ? { best: score, bestAt: { toMillis: () => Date.now() } } : {}) } } });
+  await checkAchievements();
   return record;
+}
+
+// ---------- Profile, Bestenlisten ----------
+
+export async function profileByName(nameRaw) {
+  await load();
+  const name = cleanName(nameRaw);
+  if (!NAME_RULE.test(name)) return null;
+  const u = await sdk.getDoc(sdk.doc(db, 'usernames', name));
+  if (!u.exists()) return null;
+  const uid = u.data().uid;
+  const p = await sdk.getDoc(sdk.doc(db, 'profiles', uid));
+  return p.exists() ? { uid, ...p.data() } : null;
+}
+
+export async function profileByUid(uid) {
+  await load();
+  const p = await sdk.getDoc(sdk.doc(db, 'profiles', uid));
+  return p.exists() ? { uid, ...p.data() } : null;
+}
+
+/**
+ * Bestenliste. field: 'best' | 'playSec' (pro Spiel) oder gameId = null für die Gesamtspielzeit.
+ * Gäste (ohne Namen) werden ausgeblendet.
+ */
+export async function leaderboard(gameId, field = 'playSec', max = 25) {
+  await load();
+  const path = gameId ? new sdk.FieldPath('games', gameId, field) : new sdk.FieldPath('totalSec');
+  const q = sdk.query(sdk.collection(db, 'profiles'), sdk.orderBy(path, 'desc'), sdk.limit(max * 2));
+  const snap = await sdk.getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() })).filter((p) => p.name).slice(0, max)
+    .map((p) => ({ ...p, value: gameId ? p.games?.[gameId]?.[field] : p.totalSec }));
+}
+
+// ---------- Freunde ----------
+// friendships/{a_b} (a < b) = { members: [a, b], status: 'pending' | 'accepted', requestedBy, at }
+
+const pairId = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+
+export async function friendships() {
+  await load();
+  if (!currentUser) return [];
+  const q = sdk.query(sdk.collection(db, 'friendships'), sdk.where('members', 'array-contains', currentUser.uid));
+  const snap = await sdk.getDocs(q);
+  const me = currentUser.uid;
+  const list = snap.docs.map((d) => {
+    const f = d.data();
+    const other = f.members.find((m) => m !== me);
+    return { id: d.id, other, status: f.status, incoming: f.status === 'pending' && f.requestedBy !== me, outgoing: f.status === 'pending' && f.requestedBy === me };
+  });
+  const profiles = await Promise.all(list.map((f) => profileByUid(f.other).catch(() => null)));
+  list.forEach((f, i) => { f.profile = profiles[i]; });
+  const accepted = list.filter((f) => f.status === 'accepted').length;
+  if (currentProfile?.name && currentProfile.friendCount !== accepted) {
+    await sdk.setDoc(sdk.doc(db, 'profiles', me), { friendCount: accepted }, { merge: true }).catch(() => {});
+    currentProfile = { ...currentProfile, friendCount: accepted };
+    checkAchievements({ friends: accepted }).catch(() => {});
+  }
+  return list;
+}
+
+export async function addFriend(nameRaw) {
+  await load();
+  if (!currentUser || !currentProfile?.name) throw friendly('need-account');
+  const other = await profileByName(nameRaw);
+  if (!other) throw friendly('friend-not-found');
+  const me = currentUser.uid;
+  if (other.uid === me) throw friendly('friend-self');
+  const id = pairId(me, other.uid);
+  const ref = sdk.doc(db, 'friendships', id);
+  const cur = await sdk.getDoc(ref).catch(() => null);
+  if (cur && cur.exists()) {
+    const f = cur.data();
+    if (f.status === 'accepted') throw friendly('friend-already');
+    if (f.requestedBy !== me) { await acceptFriend(id); return 'accepted'; } // hatte mich schon angefragt
+    throw friendly('friend-pending');
+  }
+  const members = [me, other.uid].sort();
+  await sdk.setDoc(ref, { members, status: 'pending', requestedBy: me, at: sdk.serverTimestamp() });
+  return 'requested';
+}
+
+export async function acceptFriend(id) {
+  await load();
+  await sdk.updateDoc(sdk.doc(db, 'friendships', id), { status: 'accepted', acceptedAt: sdk.serverTimestamp() });
+}
+
+export async function removeFriend(id) {
+  await load();
+  await sdk.deleteDoc(sdk.doc(db, 'friendships', id));
+}
+
+// ---------- Feedback ----------
+
+export async function sendFeedback(gameId, rating, text) {
+  const user = await ensureUser();
+  await sdk.addDoc(sdk.collection(db, 'feedback'), {
+    uid: user.uid, name: currentProfile?.name || null, game: gameId,
+    rating: Number(rating) || null, text: String(text || '').slice(0, 2000),
+    at: sdk.serverTimestamp(), ua: navigator.userAgent.slice(0, 200),
+  });
 }
 
 // ---------- Spielstände ----------
@@ -309,6 +453,11 @@ const MESSAGES = {
   'auth/unauthorized-domain': 'Diese Adresse ist für die Anmeldung noch nicht freigegeben.',
   'recent-login': 'Aus Sicherheitsgründen bitte einmal ab- und wieder anmelden, dann erneut löschen.',
   'google-in-use': 'Dieses Google-Konto gehört schon zu einem anderen Canopy-Account.',
+  'need-account': 'Dafür brauchst du einen Account mit Nutzernamen.',
+  'friend-not-found': 'Diesen Nutzernamen gibt es nicht.',
+  'friend-self': 'Das bist du selbst.',
+  'friend-already': 'Ihr seid schon befreundet.',
+  'friend-pending': 'Die Anfrage läuft schon. Warte, bis sie angenommen wird.',
   'save-too-big': 'Der Spielstand ist zu groß zum Hochladen.',
   'not-signed-in': 'Du bist nicht angemeldet.',
 };

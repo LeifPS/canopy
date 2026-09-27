@@ -63,6 +63,15 @@
   .id-btn { display: inline-flex; align-items: center; gap: 8px; font: 600 14px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
   .id-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sun); }
   .id-note { font-size: 13px; color: var(--muted); }
+  .nav { display: flex; gap: 2px; flex-wrap: wrap; margin-left: 10px; }
+  .nav a { text-decoration: none; font: 600 14px var(--body); color: var(--muted); padding: 7px 11px; border-radius: 999px; }
+  .nav a:hover { color: var(--ink); }
+  .nav a[aria-current="page"] { color: var(--ink); background: var(--chip-bg); }
+  .cont { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .cont a { display: flex; align-items: center; gap: 12px; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .cont a:hover { box-shadow: var(--shadow); }
+  .cont .dot { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; color: #fff; font: 800 15px var(--display); flex: none; }
+  .cont b { display: block; font-size: 15px; } .cont span { font-size: 13px; color: var(--muted); }
 
   /* Spotlight */
   .spot { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: center; padding-block: clamp(28px, 6vw, 64px) clamp(20px, 4vw, 40px); }
@@ -138,6 +147,8 @@
   @media (max-width: 760px) {
     .spot, .two { grid-template-columns: 1fr; }
     .id-note { display: none; }
+    .nav { order: 3; width: 100%; margin-left: 0; }
+    .top .wrap { flex-wrap: wrap; }
     .search { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { .game { transition: none; } .game:hover { transform: none; } }
@@ -154,6 +165,7 @@
       </svg>
       <b>Canopy</b><span>Base</span>
     </a>
+    <nav class="nav" aria-label="Hauptmenü"><a href="./" aria-current="page">Spiele</a><a href="leaderboards.html">Bestenlisten</a><a href="friends.html">Freunde</a><a href="news.html">Neuigkeiten</a></nav>
     <div class="spacer"></div>
     <span class="id-note" id="idNote">Ein Account für alle Spiele</span>
     <a class="id-btn" id="idBtn" href="account.html" style="text-decoration:none"><i class="dot"></i><span id="idLabel">Anmelden</span></a>
@@ -166,6 +178,11 @@
   </div>
 
   <div class="wrap">
+    <section class="block" id="continue" hidden>
+      <div class="block-head"><h2>Weiterspielen</h2><a class="play" href="profile.html">Mein Profil →</a></div>
+      <div class="cont" id="contList"></div>
+    </section>
+
     <section class="block" id="spiele">
       <div class="block-head">
         <h2>Alle Spiele</h2>
@@ -178,7 +195,7 @@
     <section class="block">
       <div class="two">
         <div>
-          <div class="block-head"><h2>Zuletzt aktualisiert</h2></div>
+          <div class="block-head"><h2>Zuletzt aktualisiert</h2><a class="play" href="news.html">Alle Neuigkeiten →</a></div>
           <ul class="feed" id="feed"></ul>
         </div>
         <aside class="id-panel" id="idPanel">
@@ -362,9 +379,26 @@
 </script>
 <script type="module">
   import { onChange } from './js/canopy-id.js';
+  import { levelOf, xpOf, fmtDuration } from './js/progress.js';
+  const gamesP = fetch('games.json').then((r) => r.json()).then((d) => d.games || []).catch(() => []);
+  const escH = (x) => String(x ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const msOf = (t) => (t?.toMillis ? t.toMillis() : t?.seconds ? t.seconds * 1000 : 0);
+  async function renderContinue(p) {
+    const games = await gamesP;
+    const rows = Object.entries(p?.games || {}).map(([gid, g]) => ({ g: games.find((x) => x.id === gid), stat: g }))
+      .filter((r) => r.g && r.g.url).sort((a, b) => msOf(b.stat.lastPlayed) - msOf(a.stat.lastPlayed)).slice(0, 4);
+    const sec = document.getElementById('continue');
+    if (!rows.length) { sec.hidden = true; return; }
+    document.getElementById('contList').innerHTML = rows.map(({ g, stat }) => `<a href="${g.embed ? 'play.html?g=' + encodeURIComponent(g.id) : escH(g.url)}"${g.embed ? '' : ' target="_blank" rel="noopener"'}>
+      <span class="dot" style="background:${escH(g.color)}">${escH(g.mark || g.title[0])}</span>
+      <span style="display:block"><b>${escH(g.title)}</b><span>${fmtDuration(stat.playSec)} gespielt${stat.best != null ? ` · Rekord ${stat.best}` : ''}</span></span></a>`).join('');
+    sec.hidden = false;
+  }
   onChange((s) => {
     if (s.error || !s.user) return;
-    const label = s.isGuest ? 'Gast' : (s.name || 'Mein Account');
+    renderContinue(s.profile);
+    if (s.profile?.name) { document.getElementById('idBtn').href = 'profile.html'; }
+    const label = s.isGuest ? 'Gast' : s.profile?.name ? `${s.profile.name} · Lv ${levelOf(xpOf(s.profile)).level}` : (s.name || 'Mein Account');
     document.getElementById('idLabel').textContent = label;
     document.getElementById('idNote').textContent = s.isGuest ? 'Sichere deinen Fortschritt' : 'Angemeldet';
     const cta = document.getElementById('idCta');

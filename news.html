@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Neuigkeiten · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/canopy.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Canopy</div>
+  <h1>Neuigkeiten</h1>
+  <p class="lead">Jedes Update aller Spiele, automatisch aus der Entwicklung. Neueste zuerst.</p>
+  <div class="stack">
+    <div class="chips" id="filter" role="group" aria-label="Spiel filtern"></div>
+    <section class="panel" id="list"><p class="empty">Wird geladen …</p></section>
+  </div>
+</main>
+<script type="module">
+import { mountHeader, loadGames, esc } from './js/shell.js';
+mountHeader('news');
+
+const games = await loadGames();
+const sources = games.filter((g) => g.repo).map((g) => ({ id: g.id, title: g.title, repo: g.repo, color: g.color }))
+  .concat([{ id: 'canopy', title: 'Canopy', repo: 'LeifPS/canopy', color: '#2E6A4E' }]);
+let filter = new URLSearchParams(location.search).get('g') || '';
+const CACHE = 'canopy-news-v1', TTL = 10 * 60 * 1000;
+
+// Commit-Nachricht in eine lesbare Zeile verwandeln. Merge-Commits tragen den PR-Titel in Zeile 3.
+function headline(msg) {
+  const lines = msg.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (/^Merge (pull request|branch)/.test(lines[0])) return lines[1] || null;
+  if (/^(Add files via upload|Added Files|Update [\w.-]+|Aktualisierung|Create [\w.-]+)$/i.test(lines[0])) return 'Neue Version hochgeladen';
+  return lines[0];
+}
+
+async function fetchAll() {
+  try { const c = JSON.parse(sessionStorage.getItem(CACHE) || 'null'); if (c && Date.now() - c.at < TTL) return c.items; } catch (e) {}
+  const res = await Promise.allSettled(sources.map((s) =>
+    fetch(`https://api.github.com/repos/${s.repo}/commits?per_page=20`).then((r) => r.ok ? r.json() : Promise.reject(r.status))
+      .then((list) => list.map((c) => ({ src: s.id, t: Date.parse(c.commit.committer.date), text: headline(c.commit.message), sha: c.sha, url: c.html_url })))));
+  const items = res.flatMap((r) => r.status === 'fulfilled' ? r.value : []).filter((x) => x.text)
+    .filter((x) => !/^Merge |^Co-Authored/i.test(x.text)).sort((a, b) => b.t - a.t);
+  // Gleiche Zeile am selben Tag im selben Spiel nur einmal (PR-Titel + Commit)
+  const seen = new Set();
+  const dedup = items.filter((x) => { const k = x.src + new Date(x.t).toDateString() + x.text; if (seen.has(k)) return false; seen.add(k); return true; });
+  try { sessionStorage.setItem(CACHE, JSON.stringify({ at: Date.now(), items: dedup })); } catch (e) {}
+  return dedup;
+}
+
+const dayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+function render(items) {
+  document.getElementById('filter').innerHTML = [`<button class="chip" data-f="" aria-pressed="${!filter}">Alle</button>`]
+    .concat(sources.map((s) => `<button class="chip" data-f="${s.id}" aria-pressed="${filter === s.id}">${esc(s.title)}</button>`)).join('');
+  const list = items.filter((x) => !filter || x.src === filter).slice(0, 80);
+  const el = document.getElementById('list');
+  if (!list.length) { el.innerHTML = '<p class="empty">Keine Updates gefunden.</p>'; return; }
+  let html = '', day = '';
+  for (const x of list) {
+    const d = dayFmt.format(new Date(x.t));
+    if (d !== day) { html += `${day ? '</ul>' : ''}<h2 style="font-size:16px;margin:${day ? '22px' : '0'} 0 6px">${d}</h2><ul class="feed">`; day = d; }
+    const s = sources.find((q) => q.id === x.src);
+    html += `<li style="grid-template-columns:12px 1fr"><span style="width:10px;height:10px;border-radius:50%;margin-top:7px;background:${esc(s.color)}"></span>
+      <div><b>${esc(s.title)}</b> · ${esc(x.text)}<time>${new Date(x.t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr · <a href="${esc(x.url)}" target="_blank" rel="noopener">Details</a></time></div></li>`;
+  }
+  el.innerHTML = html + '</ul>';
+}
+
+let items = [];
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (!b) return; filter = b.dataset.f; render(items); });
+fetchAll().then((x) => { items = x; render(items); }).catch(() => { document.getElementById('list').innerHTML = '<p class="empty">Die Neuigkeiten sind gerade nicht erreichbar.</p>'; });
+</script>
+</body>
+</html>

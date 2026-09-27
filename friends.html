@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Freunde · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/canopy.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Canopy</div>
+  <h1>Freunde</h1>
+  <p class="lead">Füg Freunde über ihren Nutzernamen hinzu. Dann siehst du, was sie spielen, und kannst dich in den Bestenlisten mit ihnen vergleichen.</p>
+  <div id="main"><p class="muted">Wird geladen …</p></div>
+</main>
+<script type="module">
+import * as id from './js/canopy-id.js';
+import { mountHeader, loadGames, esc, timeAgo, ms } from './js/shell.js';
+import { ACHIEVEMENTS, levelOf, xpOf } from './js/progress.js';
+mountHeader('friends');
+
+const main = document.getElementById('main');
+const games = await loadGames();
+const title = (gid) => games.find((g) => g.id === gid)?.title || gid;
+let shownFor = null;
+
+function activity(people) {
+  const ev = [];
+  for (const p of people) {
+    for (const [gid, g] of Object.entries(p.games || {})) {
+      if (ms(g.lastPlayed)) ev.push({ t: ms(g.lastPlayed), p, html: `hat <b>${esc(title(gid))}</b> gespielt` });
+      if (ms(g.bestAt) && g.best != null) ev.push({ t: ms(g.bestAt), p, html: `hat einen neuen Rekord in <b>${esc(title(gid))}</b>: ${g.best}` });
+    }
+    for (const [aid, t] of Object.entries(p.achievements || {})) {
+      const a = ACHIEVEMENTS.find((x) => x.id === aid);
+      if (a) ev.push({ t, p, html: `hat „<b>${esc(a.title)}</b>“ freigeschaltet` });
+    }
+  }
+  return ev.sort((a, b) => b.t - a.t).slice(0, 25);
+}
+
+async function render(s) {
+  if (!s.profile?.name) {
+    main.innerHTML = '<section class="panel"><p style="margin-top:0">Für Freunde brauchst du einen Account mit Nutzernamen.</p><a class="btn primary" href="account.html">Anmelden oder registrieren</a></section>';
+    return;
+  }
+  const list = await id.friendships().catch(() => null);
+  if (!list) { main.innerHTML = '<p class="msg">Freunde sind gerade nicht erreichbar. Lade die Seite neu.</p>'; return; }
+  const friends = list.filter((f) => f.status === 'accepted' && f.profile);
+  const incoming = list.filter((f) => f.incoming);
+  const outgoing = list.filter((f) => f.outgoing);
+  const feed = activity(friends.map((f) => f.profile));
+
+  main.innerHTML = `
+    <div class="cols">
+      <div class="stack">
+        <section class="panel">
+          <h2>Freund hinzufügen</h2>
+          <form id="add" style="display:flex;gap:8px;flex-wrap:wrap" novalidate>
+            <input class="field" id="fname" placeholder="Nutzername" autocapitalize="none" spellcheck="false" maxlength="20" style="flex:1;min-width:160px" aria-label="Nutzername">
+            <button class="btn primary" type="submit">Anfrage senden</button>
+          </form>
+          <p class="muted" style="font-size:13px;margin:8px 0 0">Dein Nutzername zum Weitergeben: <b style="color:var(--ink)">${esc(s.profile.name)}</b></p>
+          <div id="addMsg" style="margin-top:10px"></div>
+        </section>
+        ${incoming.length ? `<section class="panel"><h2>Anfragen an dich</h2>${incoming.map((f) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+            <a href="profile.html?u=${encodeURIComponent(f.profile?.name || '')}" style="flex:1;font-weight:600">${esc(f.profile?.name || 'Unbekannt')}</a>
+            <button class="btn small primary" data-accept="${f.id}">Annehmen</button><button class="btn small" data-remove="${f.id}">Ablehnen</button>
+          </div>`).join('')}</section>` : ''}
+        <section class="panel">
+          <h2>Deine Freunde${friends.length ? ` (${friends.length})` : ''}</h2>
+          ${friends.length ? `<table class="board"><tbody>${friends.sort((a, b) => ms(b.profile.lastSeen) - ms(a.profile.lastSeen)).map((f) => {
+            const p = f.profile;
+            return `<tr><td><a href="profile.html?u=${encodeURIComponent(p.name)}">${esc(p.name)}</a><div class="muted" style="font-size:13px">Level ${levelOf(xpOf(p)).level}${p.lastGame ? ` · zuletzt ${esc(title(p.lastGame))}` : ''}</div></td>
+              <td class="val muted" style="font-size:13px">${timeAgo(ms(p.lastSeen)) || '–'}</td>
+              <td class="val"><button class="btn small" data-remove="${f.id}" aria-label="${esc(p.name)} entfernen">Entfernen</button></td></tr>`;
+          }).join('')}</tbody></table>` : '<p class="empty">Noch keine Freunde. Schick jemandem deinen Nutzernamen oder such nach seinem.</p>'}
+          ${outgoing.length ? `<p class="muted" style="font-size:13px;margin:12px 0 0">Wartet auf Antwort: ${outgoing.map((f) => esc(f.profile?.name || '?')).join(', ')}</p>` : ''}
+        </section>
+      </div>
+      <section class="panel">
+        <h2>Aktivitäten</h2>
+        ${feed.length ? `<ul class="feed">${feed.map((e) => `<li><div class="av-sm" aria-hidden="true">${esc(e.p.name[0].toUpperCase())}</div>
+          <div><a href="profile.html?u=${encodeURIComponent(e.p.name)}" style="font-weight:600;text-decoration:none">${esc(e.p.name)}</a> ${e.html}<time>${timeAgo(e.t)}</time></div></li>`).join('')}</ul>`
+          : '<p class="empty">Sobald deine Freunde spielen, siehst du hier, was sie machen.</p>'}
+      </section>
+    </div>`;
+
+  main.querySelector('#add').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const box = main.querySelector('#addMsg'), btn = e.target.querySelector('button');
+    btn.disabled = true;
+    try {
+      const r = await id.addFriend(main.querySelector('#fname').value);
+      box.innerHTML = `<p class="msg ok">${r === 'accepted' ? 'Ihr seid jetzt befreundet.' : 'Anfrage gesendet.'}</p>`;
+      setTimeout(() => render(id.state()), 900);
+    } catch (err) { box.innerHTML = `<p class="msg">${esc(err.message)}</p>`; btn.disabled = false; }
+  });
+  main.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; await id.acceptFriend(b.dataset.accept); render(id.state()); }));
+  main.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; await id.removeFriend(b.dataset.remove); render(id.state()); }));
+}
+
+id.onChange((s) => { const key = (s.uid || '-') + (s.profile?.name || ''); if (key === shownFor) return; shownFor = key; render(s); });
+</script>
+</body>
+</html>

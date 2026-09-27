@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele. embed: true = läuft im Canopy-Player (iFrame). Erst einschalten, wenn das Spiel seinen Spielstand über Canopy ID lädt.",
+  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele. embed: true = läuft im Canopy-Player (iFrame). Erst einschalten, wenn das Spiel seinen Spielstand über Canopy ID lädt. scoreLabel: Spiel meldet Rekorde (Canopy.score), Bestenliste zeigt dann auch Rekorde.",
   "games": [
     {
       "id": "foil-eleven",
@@ -116,7 +116,8 @@
         "Arcade"
       ],
       "updatedAt": "2026-09-27",
-      "embed": true
+      "embed": true,
+      "scoreLabel": "Punkte"
     }
   ]
 }

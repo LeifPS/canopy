@@ -54,6 +54,26 @@ service cloud.firestore {
       }
     }
 
+    // Freundschaften: friendships/{a_b} mit a < b. Anfrage stellt einer, annehmen kann nur der andere,
+    // beenden kann jeder der beiden. Lesen nur die beiden Beteiligten.
+    match /friendships/{pid} {
+      function newPair() {
+        let m = request.resource.data.members;
+        return m is list && m.size() == 2 && m[0] < m[1] && pid == m[0] + '_' + m[1];
+      }
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow create: if signedIn() && newPair()
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(['members', 'status', 'requestedBy', 'at']);
+      allow update: if signedIn() && request.auth.uid in resource.data.members
+        && request.auth.uid != resource.data.requestedBy
+        && resource.data.status == 'pending' && request.resource.data.status == 'accepted'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt']);
+      allow delete: if signedIn() && request.auth.uid in resource.data.members;
+    }
+
     // Feedback zu Spielen und Prototypen: jeder Angemeldete darf abgeben, nur Admins lesen.
     match /feedback/{id} {
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;

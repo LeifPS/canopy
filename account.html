@@ -204,7 +204,8 @@ function renderProfile(s) {
       </table></div>` : '<p class="muted">Noch keine Spiele gespielt. Starte eins in Canopy Base, dann erscheint es hier.</p>'}
       <p id="linked" class="muted" style="margin:14px 0 0" hidden></p>
       <div class="row">
-        <a class="btn primary" href="./" style="text-decoration:none">Zu den Spielen</a>
+        <a class="btn primary" href="profile.html" style="text-decoration:none">Mein Profil</a>
+        <a class="btn ghost" href="friends.html" style="text-decoration:none">Freunde</a>
         ${google ? '' : `<button class="btn ghost" id="linkGoogle" type="button">${GOOGLE}Google verbinden</button>`}
         <button class="btn ghost" id="out" type="button">Abmelden</button>
       </div>

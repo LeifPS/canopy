@@ -32,6 +32,19 @@
   .msg { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 16px; color: var(--muted); }
   .msg a { color: var(--moss); }
   @media (max-width: 620px) { .back span, .sep, #direct { display: none; } }
+  .toast { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; background: #15201B; color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--sun); border-radius: 12px; padding: 10px 14px; font: 500 14px var(--body); box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: min(360px, calc(100vw - 32px)); animation: pop .25s ease; }
+  .toast b { display: block; font: 700 15px var(--display); }
+  @keyframes pop { from { transform: translateY(10px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+  dialog { background: #161F1B; color: var(--ink); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: min(440px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog h2 { font: 800 20px var(--display); margin: 0 0 6px; }
+  dialog p { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
+  .stars { display: flex; gap: 6px; margin-bottom: 12px; }
+  .stars button { font: 700 14px var(--body); width: 40px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+  .stars button[aria-pressed="true"] { background: var(--moss); color: #0F1513; border-color: transparent; }
+  dialog textarea { width: 100%; min-height: 110px; font: 15px var(--body); color: var(--ink); background: #111A16; border: 1px solid var(--line); border-radius: 10px; padding: 10px; resize: vertical; }
+  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 </style>
 </head>
 <body>
@@ -45,9 +58,20 @@
     <div class="spacer"></div>
     <a class="tool" id="who" hidden></a>
     <a class="tool" id="direct" target="_blank" rel="noopener" hidden>In neuem Tab</a>
+    <button class="tool" id="fbBtn" type="button">Feedback</button>
     <button class="tool" id="full" type="button">Vollbild</button>
   </div>
   <main id="stage"></main>
+  <dialog id="fb" aria-labelledby="fbTitle">
+    <form method="dialog" id="fbForm">
+      <h2 id="fbTitle">Feedback</h2>
+      <p>Was gefällt dir, was nervt, was fehlt? Geht direkt an den Entwickler.</p>
+      <div class="stars" role="group" aria-label="Bewertung 1 bis 5"></div>
+      <textarea id="fbText" maxlength="2000" placeholder="Dein Feedback" aria-label="Dein Feedback"></textarea>
+      <p id="fbMsg" style="margin:8px 0 0"></p>
+      <div class="row"><button class="tool" value="cancel" type="button" id="fbCancel">Abbrechen</button><button class="tool" id="fbSend" type="submit" style="background:var(--moss);color:#0F1513;border-color:transparent">Senden</button></div>
+    </form>
+  </dialog>
 
 <script type="module">
 import * as id from './js/canopy-id.js';
@@ -112,7 +136,32 @@ addEventListener('message', async (e) => {
   }
 });
 
+// Achievements als kleine Meldung unten rechts
+function toast(html) {
+  const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = html; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+id.onAchievement((a) => toast(`<b>Achievement freigeschaltet</b>${a.title} · ${a.desc}`));
+
+// Feedback
+const fbDlg = document.getElementById('fb');
+let rating = 0;
+fbDlg.querySelector('.stars').innerHTML = [1, 2, 3, 4, 5].map((n) => `<button type="button" data-r="${n}" aria-pressed="false" aria-label="${n} von 5">${n}</button>`).join('');
+fbDlg.querySelector('.stars').addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (!b) return; rating = +b.dataset.r; fbDlg.querySelectorAll('[data-r]').forEach((x) => x.setAttribute('aria-pressed', +x.dataset.r <= rating)); });
+document.getElementById('fbBtn').addEventListener('click', () => { document.getElementById('fbMsg').textContent = ''; fbDlg.showModal(); });
+document.getElementById('fbCancel').addEventListener('click', () => fbDlg.close());
+document.getElementById('fbForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = document.getElementById('fbText').value.trim(), msg = document.getElementById('fbMsg');
+  if (!text && !rating) { msg.textContent = 'Schreib kurz etwas oder gib eine Bewertung ab.'; return; }
+  const btn = document.getElementById('fbSend'); btn.disabled = true;
+  try { await id.sendFeedback(game?.id || gameKey, rating, text); fbDlg.close(); document.getElementById('fbText').value = ''; rating = 0; toast('<b>Danke!</b>Dein Feedback ist angekommen.'); }
+  catch (err) { msg.textContent = 'Senden hat nicht geklappt. Versuch es noch einmal.'; }
+  finally { btn.disabled = false; }
+});
+
 fetch('games.json').then((r) => r.json()).then(({ games }) => {
+  id.setGameIds((games || []).filter((x) => x.embed).map((x) => x.id));
   game = (games || []).find((x) => x.id === gameKey);
   if (!game || !game.url) return fail('Dieses Spiel gibt es nicht.');
   if (!game.embed) { location.replace(game.url); return; } // noch nicht Canopy-fähig: direkt öffnen

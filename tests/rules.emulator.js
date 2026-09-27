@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, getDoc, setDoc, deleteDoc, runTransaction, writeBatch } = require('firebase/firestore');
+const { doc, getDoc, setDoc, deleteDoc, updateDoc, getDocs, query, where, collection, runTransaction, writeBatch } = require('firebase/firestore');
 
 (async () => {
   const env = await initializeTestEnvironment({
@@ -50,6 +50,18 @@ const { doc, getDoc, setDoc, deleteDoc, runTransaction, writeBatch } = require('
   await check('Ohne Login kein Spielstand', assertFails(getDoc(save(nobody, 'uMax'))));
   await check('Admin liest Max\' Spielstand (Support)', assertSucceeds(getDoc(save(admin, 'uMax'))));
   await check('Max löscht eigene Version (Account löschen)', assertSucceeds(deleteDoc(ver(max, 'uMax', '00000001'))));
+
+  // Freunde
+  const fr = (db) => doc(db, 'friendships', 'uEva_uMax');
+  await check('Max fragt Eva an', assertSucceeds(setDoc(fr(max), { members: ['uEva', 'uMax'], status: 'pending', requestedBy: 'uMax', at: 1 })));
+  await check('Anfrage im Namen eines anderen abgelehnt', assertFails(setDoc(doc(max, 'friendships', 'uEva_uX'), { members: ['uEva', 'uX'], status: 'pending', requestedBy: 'uX', at: 1 })));
+  await check('Direkt "accepted" anlegen abgelehnt', assertFails(setDoc(doc(max, 'friendships', 'uMax_uZed'), { members: ['uMax', 'uZed'], status: 'accepted', requestedBy: 'uMax', at: 1 })));
+  await check('Falsche Paar-ID abgelehnt', assertFails(setDoc(doc(max, 'friendships', 'quatsch'), { members: ['uMax', 'uZed'], status: 'pending', requestedBy: 'uMax', at: 1 })));
+  await check('Max kann eigene Anfrage NICHT selbst annehmen', assertFails(updateDoc(fr(max), { status: 'accepted', acceptedAt: 2 })));
+  await check('Fremder liest Freundschaft NICHT', assertFails(getDoc(doc(guest, 'friendships', 'uEva_uMax'))));
+  await check('Eva nimmt an', assertSucceeds(updateDoc(fr(eva), { status: 'accepted', acceptedAt: 2 })));
+  await check('Eva liest Freundschaften per Abfrage', assertSucceeds(getDocs(query(collection(eva, 'friendships'), where('members', 'array-contains', 'uEva')))));
+  await check('Max beendet Freundschaft', assertSucceeds(deleteDoc(fr(max))));
 
   // Feedback
   await check('Max gibt Feedback ab', assertSucceeds(setDoc(doc(max, 'feedback', 'f1'), { uid: 'uMax', text: 'cool' })));

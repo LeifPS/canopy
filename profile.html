@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Profil · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/canopy.css">
+</head>
+<body>
+<main class="wrap" id="main"><p class="muted">Wird geladen …</p></main>
+<script type="module">
+import * as id from './js/canopy-id.js';
+import { mountHeader, loadGames, esc, timeAgo, ms } from './js/shell.js';
+import { ACHIEVEMENTS, TIER_NAMES, levelOf, xpOf, fmtDuration } from './js/progress.js';
+mountHeader('');
+
+const main = document.getElementById('main');
+const wanted = new URLSearchParams(location.search).get('u');
+const games = await loadGames();
+const title = (gid) => games.find((g) => g.id === gid)?.title || gid;
+let shownFor = null;
+
+async function render(s) {
+  let p, own = false;
+  if (wanted) { p = await id.profileByName(wanted).catch(() => null); own = p && p.uid === s.uid; }
+  else if (s.profile?.name) { p = { uid: s.uid, ...s.profile }; own = true; }
+  else { main.innerHTML = '<h1>Dein Profil</h1><p class="lead">Melde dich an, dann siehst du hier dein Level, deine Achievements und deine Statistik.</p><a class="btn primary" href="account.html">Anmelden oder registrieren</a>'; return; }
+  if (!p) { main.innerHTML = `<h1>Nicht gefunden</h1><p class="lead">Es gibt keinen Spieler mit dem Namen „${esc(wanted)}“.</p>`; return; }
+  document.title = `${p.name} · Canopy`;
+
+  const lv = levelOf(xpOf(p));
+  const ach = p.achievements || {};
+  const unlocked = ACHIEVEMENTS.filter((a) => ach[a.id]).length;
+  const rows = Object.entries(p.games || {}).map(([gid, g]) => ({ gid, ...g })).sort((a, b) => (b.playSec || 0) - (a.playSec || 0));
+  const mine = !own && s.profile?.name ? s.profile : null;
+  const since = ms(p.createdAt) ? new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(new Date(ms(p.createdAt))) : null;
+
+  main.innerHTML = `
+    <section class="panel" style="display:grid;gap:16px">
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div class="av-lg" aria-hidden="true">${esc(p.name[0].toUpperCase())}</div>
+        <div style="flex:1;min-width:200px">
+          <h1 style="margin:0">${esc(p.name)}</h1>
+          <div class="muted">${since ? `Dabei seit ${since}` : 'Canopy ID'}${ms(p.lastSeen) ? ` · zuletzt aktiv ${timeAgo(ms(p.lastSeen))}` : ''}</div>
+        </div>
+        <div id="friendAction"></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px"><span>Level ${lv.level}</span><span class="muted" style="font:500 13px var(--mono)">${lv.xp} / ${lv.to} XP</span></div>
+        <div class="lvbar"><i style="width:${Math.round(lv.progress * 100)}%"></i></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px 28px;color:var(--muted);font-size:14px">
+        <span><b style="font:800 22px var(--display);color:var(--ink)">${fmtDuration(p.totalSec)}</b> gespielt</span>
+        <span><b style="font:800 22px var(--display);color:var(--ink)">${rows.length}</b> ${rows.length === 1 ? 'Spiel' : 'Spiele'}</span>
+        <span><b style="font:800 22px var(--display);color:var(--ink)">${p.streak?.count || 0}</b> Tage Serie (Bestwert ${p.streak?.best || 0})</span>
+        <span><b style="font:800 22px var(--display);color:var(--ink)">${unlocked}/${ACHIEVEMENTS.length}</b> Achievements</span>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:20px">
+      <h2>Spiele</h2>
+      ${rows.length ? `<div style="overflow-x:auto"><table class="board"><tbody>
+        <tr><td class="muted" style="font:500 11px var(--mono);text-transform:uppercase">Spiel</td><td class="val muted" style="font:500 11px var(--mono)">SPIELZEIT</td><td class="val muted" style="font:500 11px var(--mono)">REKORD</td>${mine ? '<td class="val muted" style="font:500 11px var(--mono)">DU</td>' : ''}<td class="val muted" style="font:500 11px var(--mono)">ZULETZT</td></tr>
+        ${rows.map((r) => `<tr><td><a href="leaderboards.html?g=${encodeURIComponent(r.gid)}">${esc(title(r.gid))}</a></td>
+          <td class="val">${fmtDuration(r.playSec)}</td><td class="val">${r.best ?? '–'}</td>
+          ${mine ? `<td class="val muted">${mine.games?.[r.gid]?.playSec ? fmtDuration(mine.games[r.gid].playSec) : '–'}${mine.games?.[r.gid]?.best != null ? ` · ${mine.games[r.gid].best}` : ''}</td>` : ''}
+          <td class="val muted">${timeAgo(ms(r.lastPlayed))}</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="empty">Noch keine Spiele gespielt.</p>'}
+    </section>
+
+    <section style="margin-top:20px">
+      <h2>Achievements</h2>
+      <div class="ach-grid">${ACHIEVEMENTS.map((a) => `
+        <div class="ach ${ach[a.id] ? '' : 'locked'}" title="${TIER_NAMES[a.tier]}">
+          <div class="medal t${a.tier}" aria-hidden="true">${ach[a.id] ? '✓' : '?'}</div>
+          <div><b>${esc(a.title)}</b><span>${esc(a.desc)}${ach[a.id] ? ` · ${new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'short' }).format(new Date(ach[a.id]))}` : ''}</span></div>
+        </div>`).join('')}</div>
+    </section>
+    ${own ? '<p style="margin-top:24px"><a class="btn" href="account.html">Account-Einstellungen</a></p>' : ''}`;
+
+  if (!own && s.profile?.name) friendButton(p);
+}
+
+async function friendButton(p) {
+  const box = document.getElementById('friendAction');
+  const list = await id.friendships().catch(() => []);
+  const f = list.find((x) => x.other === p.uid);
+  if (f?.status === 'accepted') { box.innerHTML = '<span class="muted">✓ Ihr seid befreundet</span>'; return; }
+  if (f?.outgoing) { box.innerHTML = '<span class="muted">Anfrage gesendet</span>'; return; }
+  if (f?.incoming) { box.innerHTML = '<button class="btn primary" id="fa">Anfrage annehmen</button>'; box.querySelector('#fa').onclick = async () => { await id.acceptFriend(f.id); friendButton(p); }; return; }
+  box.innerHTML = '<button class="btn primary" id="fa">Als Freund hinzufügen</button>';
+  box.querySelector('#fa').onclick = async (e) => {
+    e.target.disabled = true;
+    try { await id.addFriend(p.name); friendButton(p); } catch (err) { box.innerHTML = `<span class="msg">${esc(err.message)}</span>`; }
+  };
+}
+
+id.onChange((s) => { const key = (s.uid || '-') + (s.profile?.name || ''); if (key === shownFor) return; shownFor = key; render(s); });
+</script>
+</body>
+</html>

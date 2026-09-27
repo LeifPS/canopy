@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bestenlisten · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/canopy.css">
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Canopy</div>
+  <h1>Bestenlisten</h1>
+  <p class="lead">Wer spielt am meisten, wer hat die besten Rekorde? Für alle Spieler oder nur für dich und deine Freunde.</p>
+  <div class="stack">
+    <div class="chips" id="games" role="group" aria-label="Spiel wählen"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between">
+      <div class="chips" id="metric" role="group" aria-label="Wertung"></div>
+      <div class="chips" id="scope" role="group" aria-label="Wer">
+        <button class="chip" data-s="all" aria-pressed="true">Alle</button>
+        <button class="chip" data-s="friends" aria-pressed="false">Freunde</button>
+      </div>
+    </div>
+    <section class="panel"><h2 id="title">Gesamtspielzeit</h2><div id="list"><p class="empty">Wird geladen …</p></div></section>
+  </div>
+</main>
+<script type="module">
+import * as id from './js/canopy-id.js';
+import { mountHeader, loadGames, esc } from './js/shell.js';
+import { fmtDuration } from './js/progress.js';
+mountHeader('boards');
+
+const games = (await loadGames()).filter((g) => g.embed);
+let game = new URLSearchParams(location.search).get('g') || null, metric = 'playSec', scope = 'all';
+if (game && !games.some((g) => g.id === game)) game = null;
+const $ = (s) => document.querySelector(s);
+
+function renderChips() {
+  $('#games').innerHTML = [`<button class="chip" data-g="" aria-pressed="${!game}">Gesamt</button>`]
+    .concat(games.map((g) => `<button class="chip" data-g="${esc(g.id)}" aria-pressed="${game === g.id}">${esc(g.title)}</button>`)).join('');
+  const g = games.find((x) => x.id === game);
+  if (!g?.scoreLabel && metric === 'best') metric = 'playSec';
+  $('#metric').innerHTML = g ? `<button class="chip" data-m="playSec" aria-pressed="${metric === 'playSec'}">Spielzeit</button>` +
+    (g.scoreLabel ? `<button class="chip" data-m="best" aria-pressed="${metric === 'best'}">Rekord</button>` : '') : '';
+}
+
+async function rows() {
+  if (scope === 'friends') {
+    const s = id.state();
+    if (!s.profile?.name) return null;
+    const fs = await id.friendships();
+    const people = [{ uid: s.uid, ...s.profile }, ...fs.filter((f) => f.status === 'accepted' && f.profile).map((f) => f.profile)];
+    return people.map((p) => ({ ...p, value: game ? p.games?.[game]?.[metric] : p.totalSec }))
+      .filter((p) => typeof p.value === 'number' && p.value > 0).sort((a, b) => b.value - a.value);
+  }
+  return id.leaderboard(game, metric, 25);
+}
+
+async function render() {
+  renderChips();
+  const g = games.find((x) => x.id === game);
+  $('#title').textContent = g ? `${g.title}: ${metric === 'best' ? 'Rekorde' : 'Spielzeit'}` : 'Gesamtspielzeit';
+  $('#list').innerHTML = '<p class="empty">Wird geladen …</p>';
+  let list;
+  try { list = await rows(); } catch (e) { $('#list').innerHTML = '<p class="empty">Die Bestenliste ist gerade nicht erreichbar.</p>'; return; }
+  if (list === null) { $('#list').innerHTML = '<p class="empty">Melde dich an und füg Freunde hinzu, um dich mit ihnen zu vergleichen. <a href="account.html">Anmelden</a></p>'; return; }
+  if (!list.length) { $('#list').innerHTML = '<p class="empty">Hier steht noch niemand. Spiel eine Runde und sei der Erste.</p>'; return; }
+  const me = id.state().uid;
+  const fmt = (v) => metric === 'best' && g ? `${v} ${esc(g.scoreLabel)}` : fmtDuration(v);
+  $('#list').innerHTML = `<table class="board"><tbody>${list.map((p, i) => `
+    <tr class="${i < 3 ? 'top' + (i + 1) : ''} ${p.uid === me ? 'mine' : ''}">
+      <td class="rank">${i + 1}</td>
+      <td><a href="profile.html?u=${encodeURIComponent(p.name)}">${esc(p.name)}</a></td>
+      <td class="val">${fmt(p.value)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-g],[data-m],[data-s]'); if (!b) return;
+  if ('g' in b.dataset) { game = b.dataset.g || null; metric = 'playSec'; }
+  if ('m' in b.dataset) metric = b.dataset.m;
+  if ('s' in b.dataset) { scope = b.dataset.s; document.querySelectorAll('[data-s]').forEach((x) => x.setAttribute('aria-pressed', x === b)); }
+  render();
+});
+id.onChange(() => { if (scope === 'friends') render(); });
+render();
+</script>
+</body>
+</html>
