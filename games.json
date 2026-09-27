@@ -40,7 +40,7 @@
       "title": "Chess RNG",
       "mark": "CH",
       "tagline": "Schach mit Zufall: Figuren würfeln, Loadouts bauen, in der Rangliste aufsteigen.",
-      "url": "https://chessrng.web.app",
+      "url": "https://chessrng.web.app/index.html",
       "repo": "LeifPS/chessrng",
       "status": "live",
       "color": "#1E5A48",
