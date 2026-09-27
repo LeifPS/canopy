@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Snake · Canopy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0E1512; --board: #13201B; --grid: #182821; --snake: #6CC596; --head: #A6E7C2; --apple: #E8AE4E;
+    --ink: #E3EAE6; --muted: #8FA298;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--display); display: grid; place-items: center; padding: 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .game { width: min(92vmin, 560px); display: grid; gap: 12px; }
+  .hud { display: flex; justify-content: space-between; align-items: baseline; }
+  .hud h1 { margin: 0; font-weight: 800; font-size: 26px; letter-spacing: -.03em; }
+  .scores { display: flex; gap: 18px; font: 500 13px var(--mono); color: var(--muted); }
+  .scores b { color: var(--ink); font-size: 18px; font-variant-numeric: tabular-nums; margin-left: 6px; }
+  .wrap { position: relative; aspect-ratio: 1; max-width: 100%; }
+  canvas { width: 100%; height: 100%; display: block; border-radius: 14px; background: var(--board); }
+  .overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 10px; background: rgba(14,21,18,.72); border-radius: 14px; cursor: pointer; }
+  .overlay h2 { margin: 0; font-weight: 800; font-size: clamp(28px, 7vmin, 44px); letter-spacing: -.03em; }
+  .overlay p { margin: 0; font: 500 13px var(--mono); color: var(--muted); }
+  .hint { font: 500 12px var(--mono); color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+  <div class="game">
+    <div class="hud">
+      <h1>Snake</h1>
+      <div class="scores"><span>Punkte<b id="score">0</b></span><span>Rekord<b id="best">0</b></span></div>
+    </div>
+    <div class="wrap">
+      <canvas id="c" width="600" height="600" aria-label="Spielfeld"></canvas>
+      <div class="overlay" id="overlay" role="button" tabindex="0">
+        <h2 id="ovTitle">Snake</h2>
+        <p id="ovText">Tippen oder Leertaste zum Starten</p>
+      </div>
+    </div>
+    <div class="hint">Pfeiltasten oder WASD · Wischen am Handy · P für Pause</div>
+  </div>
+
+<script>
+(() => {
+  const N = 20;                       // Felder pro Seite
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const S = cv.width / N;
+  const $ = (id) => document.getElementById(id);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const colors = { board: css('--board'), grid: css('--grid'), snake: css('--snake'), head: css('--head'), apple: css('--apple') };
+  const BEST_KEY = 'canopy.snake.best';
+
+  let best = 0;
+  try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) {}
+  $('best').textContent = best;
+
+  // Kleiner Vorgriff auf das Canopy-SDK: der Hub bekommt Ereignisse per postMessage.
+  const canopy = (type, data) => { try { if (parent !== window) parent.postMessage({ canopy: 1, game: 'snake', type, ...data }, '*'); } catch (e) {} };
+
+  let snake, dir, queue, apple, score, state = 'ready', timer = 0, last = 0, stepMs;
+
+  function reset() {
+    snake = [{ x: 9, y: 10 }, { x: 8, y: 10 }, { x: 7, y: 10 }];
+    dir = { x: 1, y: 0 }; queue = [];
+    score = 0; stepMs = 130;
+    $('score').textContent = 0;
+    placeApple();
+  }
+  function placeApple() {
+    const free = [];
+    for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if (!snake.some((p) => p.x === x && p.y === y)) free.push({ x, y });
+    apple = free[Math.floor(Math.random() * free.length)];
+  }
+
+  function turn(x, y) {
+    const lastDir = queue.length ? queue[queue.length - 1] : dir;
+    if (lastDir.x === -x && lastDir.y === -y) return;       // nicht rückwärts
+    if (lastDir.x === x && lastDir.y === y) return;
+    if (queue.length < 3) queue.push({ x, y });
+    if (state === 'ready') start();
+  }
+
+  function start() {
+    if (state === 'over') reset();
+    state = 'run'; $('overlay').hidden = true; last = performance.now(); timer = 0;
+    canopy('start');
+    requestAnimationFrame(loop);
+  }
+  function pause() {
+    if (state !== 'run') return;
+    state = 'paused'; showOverlay('Pause', 'Tippen oder P zum Weiterspielen');
+  }
+  function resume() { state = 'run'; $('overlay').hidden = true; last = performance.now(); requestAnimationFrame(loop); }
+  function showOverlay(t, p) { $('ovTitle').textContent = t; $('ovText').textContent = p; $('overlay').hidden = false; }
+
+  function step() {
+    if (queue.length) dir = queue.shift();
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    const hitWall = head.x < 0 || head.y < 0 || head.x >= N || head.y >= N;
+    const eats = head.x === apple.x && head.y === apple.y;
+    const body = eats ? snake : snake.slice(0, -1);
+    if (hitWall || body.some((p) => p.x === head.x && p.y === head.y)) return gameOver();
+    snake.unshift(head);
+    if (eats) {
+      score++; $('score').textContent = score;
+      stepMs = Math.max(60, 130 - score * 2.5);
+      if (snake.length === N * N) return gameOver(true);
+      placeApple();
+    } else snake.pop();
+  }
+
+  function gameOver(won) {
+    state = 'over';
+    const record = score > best;
+    if (record) { best = score; $('best').textContent = best; try { localStorage.setItem(BEST_KEY, best); } catch (e) {} }
+    canopy('score', { score, record });
+    showOverlay(won ? 'Feld voll!' : record ? 'Neuer Rekord!' : 'Game over', `${score} Punkte · Tippen für neue Runde`);
+    draw();
+  }
+
+  function loop(t) {
+    if (state !== 'run') return;
+    timer += t - last; last = t;
+    while (timer >= stepMs && state === 'run') { timer -= stepMs; step(); }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function cell(x, y, color, inset, r) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x * S + inset, y * S + inset, S - inset * 2, S - inset * 2, r);
+    ctx.fill();
+  }
+  function draw() {
+    ctx.fillStyle = colors.board; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = colors.grid;
+    for (let x = 0; x < N; x++) for (let y = 0; y < N; y++) if ((x + y) % 2) ctx.fillRect(x * S, y * S, S, S);
+    cell(apple.x, apple.y, colors.apple, S * 0.18, S * 0.4);
+    snake.forEach((p, i) => cell(p.x, p.y, i === 0 ? colors.head : colors.snake, i === 0 ? 1.5 : 3, S * 0.28));
+  }
+
+  const keys = { ArrowUp: [0, -1], w: [0, -1], W: [0, -1], ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
+                 ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0], ArrowRight: [1, 0], d: [1, 0], D: [1, 0] };
+  addEventListener('keydown', (e) => {
+    if (keys[e.key]) { e.preventDefault(); if (state === 'paused') resume(); turn(...keys[e.key]); if (state === 'over') { reset(); start(); } return; }
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); state === 'run' ? pause() : state === 'paused' ? resume() : start(); }
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') state === 'run' ? pause() : state === 'paused' && resume();
+  });
+  $('overlay').addEventListener('click', () => state === 'paused' ? resume() : start());
+
+  let touch = null;
+  addEventListener('touchstart', (e) => { const t = e.touches[0]; touch = { x: t.clientX, y: t.clientY }; }, { passive: true });
+  addEventListener('touchmove', (e) => {
+    if (!touch) return;
+    const t = e.touches[0], dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    if (state === 'over') { reset(); }
+    if (state === 'paused') resume();
+    Math.abs(dx) > Math.abs(dy) ? turn(Math.sign(dx), 0) : turn(0, Math.sign(dy));
+    touch = { x: t.clientX, y: t.clientY };
+  }, { passive: true });
+  addEventListener('touchend', () => { touch = null; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+
+  reset(); draw();
+  canopy('ready');
+})();
+</script>
+</body>
+</html>

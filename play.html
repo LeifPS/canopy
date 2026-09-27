@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canopy Base</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@500;600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bar: #0F1513; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C; --moss: #5DAE84; --sun: #E8AE4E;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: #000; color: var(--ink); font-family: var(--body); display: flex; flex-direction: column; }
+  .bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); background: var(--bar); border-bottom: 1px solid var(--line); }
+  .back { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+  .back svg { width: 24px; height: 24px; }
+  .back span { font-family: var(--display); font-weight: 800; letter-spacing: -.02em; }
+  .sep { width: 1px; height: 20px; background: var(--line); }
+  .title { font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spacer { flex: 1; }
+  .tool { font: 600 13px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .tool:hover { border-color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+  main { flex: 1; position: relative; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+  .msg { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 16px; color: var(--muted); }
+  .msg a { color: var(--moss); }
+  @media (max-width: 520px) { .back span, .sep, #direct { display: none; } }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <a class="back" href="./" aria-label="Zurück zu Canopy Base">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 22a13 13 0 0 1 26 0z" fill="var(--moss)"/><path d="M8 22a8 8 0 0 1 16 0z" fill="var(--sun)"/><rect x="15" y="22" width="2" height="7" rx="1" fill="var(--ink)"/></svg>
+      <span>Canopy</span>
+    </a>
+    <div class="sep"></div>
+    <div class="title" id="title">Wird geladen</div>
+    <div class="spacer"></div>
+    <a class="tool" id="direct" target="_blank" rel="noopener" hidden>In neuem Tab</a>
+    <button class="tool" id="full" type="button">Vollbild</button>
+  </div>
+  <main id="stage"></main>
+
+<script>
+(() => {
+  const id = new URLSearchParams(location.search).get('g');
+  const stage = document.getElementById('stage');
+  const fail = (text) => { stage.innerHTML = `<div class="msg"><p>${text}</p><p><a href="./">Zurück zu allen Spielen</a></p></div>`; };
+
+  fetch('games.json').then((r) => r.json()).then(({ games }) => {
+    const g = (games || []).find((x) => x.id === id);
+    if (!g || !g.url) return fail('Dieses Spiel gibt es nicht.');
+    if (!g.embed) { location.replace(g.url); return; } // noch nicht Canopy-fähig: direkt öffnen
+    document.title = `${g.title} · Canopy Base`;
+    document.getElementById('title').textContent = g.title;
+    const direct = document.getElementById('direct');
+    direct.href = g.url; direct.hidden = false;
+    const f = document.createElement('iframe');
+    f.src = g.url;
+    f.title = g.title;
+    f.allow = 'fullscreen; autoplay; gamepad; clipboard-write';
+    stage.appendChild(f);
+    f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch (e) {} });
+  }).catch(() => fail('Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.'));
+
+  document.getElementById('full').addEventListener('click', () => {
+    const el = stage;
+    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).catch(() => {});
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele.",
+  "_hinweis": "Die zentrale Spieleliste von Canopy Base. Neues Spiel = neuer Eintrag. status: live | beta | prototyp | mono | demnaechst. updatedAt wird auf der Website zusätzlich live von GitHub geholt, wenn repo gesetzt ist. mark = Kürzel auf dem Cover. releaseAt (optional) zeigt einen Countdown für kommende Spiele. embed: true = läuft im Canopy-Player (iFrame). Erst einschalten, wenn das Spiel seinen Spielstand über Canopy ID lädt.",
   "games": [
     {
       "id": "foil-eleven",
@@ -15,7 +15,8 @@
         "Online",
         "Liga"
       ],
-      "updatedAt": "2026-09-24"
+      "updatedAt": "2026-09-24",
+      "embed": false
     },
     {
       "id": "tierspiel",
@@ -31,7 +32,8 @@
         "Gacha",
         "Handel"
       ],
-      "updatedAt": "2026-09-26"
+      "updatedAt": "2026-09-26",
+      "embed": false
     },
     {
       "id": "chess-rng",
@@ -47,7 +49,8 @@
         "RNG",
         "Rangliste"
       ],
-      "updatedAt": "2026-09-25"
+      "updatedAt": "2026-09-25",
+      "embed": false
     },
     {
       "id": "cookie-rng-2",
@@ -63,7 +66,8 @@
         "Sammeln",
         "Rangliste"
       ],
-      "updatedAt": null
+      "updatedAt": null,
+      "embed": false
     },
     {
       "id": "cookie-rng",
@@ -78,7 +82,8 @@
         "RNG",
         "Sammeln"
       ],
-      "updatedAt": null
+      "updatedAt": null,
+      "embed": false
     },
     {
       "id": "ernte-zeit",
@@ -94,23 +99,24 @@
         "Idle",
         "Tausch"
       ],
-      "updatedAt": "2026-04-29"
+      "updatedAt": "2026-04-29",
+      "embed": false
     },
     {
       "id": "snake",
       "title": "Snake",
       "mark": "SN",
-      "tagline": "Das erste Canopy-Monogame: schnell gebaut, mit Bestenliste und Achievements von Anfang an.",
-      "url": null,
+      "tagline": "Klassisches Snake: Äpfel fressen, wachsen, nicht in dich selbst fahren. Mit Tastatur oder Wischen.",
+      "url": "mono/snake/",
       "repo": null,
-      "status": "demnaechst",
+      "status": "mono",
       "color": "#3F5A50",
       "tags": [
         "Mono",
         "Arcade"
       ],
-      "updatedAt": null,
-      "releaseAt": null
+      "updatedAt": "2026-09-27",
+      "embed": true
     }
   ]
 }

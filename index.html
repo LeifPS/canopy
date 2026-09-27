@@ -253,6 +253,12 @@
     return `aktualisiert ${fmt.format(new Date(g.updatedAt))}`;
   }
 
+  // Spiele mit "embed": true laufen im Canopy-Player (play.html, iFrame). Alle anderen öffnen sich
+  // direkt, bis sie ihren Spielstand über Canopy ID laden (sonst wirkt der Spielstand im iFrame leer).
+  const linkAttrs = (g) => g.embed
+    ? `href="play.html?g=${encodeURIComponent(g.id)}"`
+    : `href="${esc(g.url)}" target="_blank" rel="noopener"`;
+
   function card(g) {
     const playable = !!g.url && g.status !== 'demnaechst';
     const fresh = playable && daysAgo(g.updatedAt) <= FRESH_DAYS;
@@ -268,7 +274,7 @@
         <div class="row">
           <span class="when">${esc(whenText(g))}</span>
           ${playable
-            ? `<a class="play" href="${esc(g.url)}" target="_blank" rel="noopener">Spielen →</a>`
+            ? `<a class="play" ${linkAttrs(g)}>Spielen →</a>`
             : `<span class="play" aria-disabled="true">Bald</span>`}
         </div>
       </div>
@@ -286,12 +292,12 @@
         <h1>Alle Spiele. <em>Ein Ort.</em></h1>
         <p class="lead">Hier findest du jedes Canopy-Spiel, siehst was neu ist und was als Nächstes kommt. Bald speichert Canopy ID deinen Fortschritt aus allen Spielen an einem Ort.</p>
         <div class="btn-row">
-          ${g ? `<a class="btn primary" href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.title)} spielen</a>` : ''}
+          ${g ? `<a class="btn primary" ${linkAttrs(g)}>${esc(g.title)} spielen</a>` : ''}
           <a class="btn ghost" href="#spiele">Alle Spiele ansehen</a>
         </div>
         <div class="facts"><span><b>${live}</b>spielbar</span><span><b>${soon}</b>in Arbeit</span><span><b>1</b>Account für alles, bald</span></div>
       </div>
-      ${g ? `<a class="spot-card" href="${esc(g.url)}" target="_blank" rel="noopener" style="background:${esc(g.color)}">
+      ${g ? `<a class="spot-card" ${linkAttrs(g)} style="background:${esc(g.color)}">
         <div class="cover">${cover(g)}</div>
         <div class="meta"><small>Neuestes Update · ${esc(whenText(g))}</small><strong>${esc(g.title)}</strong></div>
       </a>` : ''}`;
