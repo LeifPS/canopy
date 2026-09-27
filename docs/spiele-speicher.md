@@ -12,6 +12,10 @@ Spielstand wird nie gelöscht**, nur kopiert.
 | Cookie RNG | `LeifPS/cookierng1` (eine kopierte HTML-Datei, ~6.900 Zeilen) | `rangspiel` (nur Rangliste) | keins | localStorage `cookierng_v1`, dazu `cookierng_settings_v1`, `cookierng_rank_v1` |
 | Cookie RNG II | `LeifPS/cookierng2` | `cookie-rng` (Firebase Hosting) | anonym + Google | localStorage `cookierng2_save_v1` + Firestore `saves/{uid}` (`json`, `at`), Cloud-Sync alle 2–5 Min. |
 
+## Stand des Umzugs
+
+- **Chess RNG**: umgezogen 27.09. (chessrng PR #1). Läuft im Player, speichert in der Canopy ID, Button „In Canopy ID übertragen“ auf chessrng.web.app. Muster für die anderen localStorage-Spiele: `canopyBoot`/`canopyPush`/`canopyTransfer` in `chessrng/public/index.html`.
+
 ## Umzugsweg pro Spiel
 
 - **localStorage-Spiele** (Chess RNG, Ernte-Zeit, Cookie RNG): Button „In Canopy ID übertragen“
