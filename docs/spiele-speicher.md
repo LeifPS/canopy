@@ -18,6 +18,9 @@ Spielstand wird nie gelöscht**, nur kopiert.
 
 - **Foil Eleven**: im Player per Einmal-Login (foil-xi PR, Functions `foilLink`/`foilToken`). Erstes Login im Player verbindet den Verein, danach ohne Passwort.
 
+- **Tierspiel, Ernte-Zeit, Cookie RNG, Cookie RNG II**: Canopy-Brücke (`sdk/canopy-bridge.js`) eingebaut (je PR `canopy/bridge`). `embed` in games.json erst nach dem Deploy einschalten.
+- Neue localStorage-Spiele: nur die Brücke einbinden, siehe Kopf von `sdk/canopy-bridge.js`.
+
 ## Umzugsweg pro Spiel
 
 - **localStorage-Spiele** (Chess RNG, Ernte-Zeit, Cookie RNG): Button „In Canopy ID übertragen“
