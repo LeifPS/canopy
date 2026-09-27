@@ -4,9 +4,9 @@
 
 ## Reihenfolge
 
-1. **Absichern:** Backups/PITR, Foil-Regeln auf Vereinskonten beschränken (foil-xi PR #2), eigene Datenbank `canopy`, Functions-Codebase `canopy`. ← in Arbeit
+1. **Absichern:** Backups/PITR, Foil-Regeln auf Vereinskonten beschränken (foil-xi PR #2), eigene Datenbank `canopy`, Functions-Codebase `canopy`. ← erledigt 27.09. (Foil-Regeln live, Datenbank `canopy` + Regeln live, Backups, Budget, Login-Arten, Domain canopybase.pages.dev)
 2. **Canopy Base:** alle Spiele, Status, Neu/Bald, Countdown, Changelog aus GitHub, Statusseite. ← erste Version steht
-3. **Canopy ID + SDK:** ← erste Version steht (Login, Kontoseite, Spielzeit, Rekorde, Cloud-Saves mit Versionen, SDK, Snake nutzt es). Login (Nutzername+Passwort oder Google, Gastmodus per Anonymous Auth), `canopy-sdk.js` mit Spielzeit, Events, Scores, Cloud-Saves (local-first, Versionen, Konfliktabfrage). Profil, „Account löschen“, Datenschutzseite.
+3. **Canopy ID + SDK:** ← live und getestet 27.09. (Login, Kontoseite, Spielzeit, Rekorde, Cloud-Saves mit Versionen, SDK, Snake nutzt es). Login (Nutzername+Passwort oder Google, Gastmodus per Anonymous Auth), `canopy-sdk.js` mit Spielzeit, Events, Scores, Cloud-Saves (local-first, Versionen, Konfliktabfrage). Profil, „Account löschen“, Datenschutzseite.
 4. **Spiele umziehen:** siehe `spiele-speicher.md`.
 5. **Achievements & Motivation:** Achievements als Regeln pro Spiel, Meta-Achievements, XP/Level, Daily/Weekly Quests, Event-Wochen.
 6. **Social:** Freundescodes, Profile vergleichen, Bestenlisten (global + Freunde), Activity Feed, Rekord-Duelle, „gerade online in …“.
