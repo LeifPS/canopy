@@ -107,8 +107,9 @@
   function bootHub() {
     C = window.Canopy;
     C.ready(cfg.game);
-    var reveal = function () {};
-    var showCover = function () { reveal = hideUntilReady(); };
+    var ready = false, removeCover = function () {};
+    var reveal = function () { ready = true; removeCover(); };
+    var showCover = function () { if (!ready) removeCover = hideUntilReady(); }; // war das Laden schneller als die Seite, gar nicht erst zeigen
     if (document.body) showCover(); else document.addEventListener('DOMContentLoaded', showCover);
     var giveUp = setTimeout(function () { reveal(); }, 8000); // nie länger als 8 s blockieren
     C.load().then(function (r) {
