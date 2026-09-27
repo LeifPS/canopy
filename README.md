@@ -1,7 +1,9 @@
 # Canopy
 
 - **Canopy Base**: die Website mit allen Spielen (`index.html`, Daten in `games.json`)
-- **Canopy ID**: der gemeinsame Account für alle Spiele (in Arbeit)
+- **Canopy ID**: der gemeinsame Account für alle Spiele (`account.html`, Logik in `js/canopy-id.js`)
+- **Canopy-Player**: `play.html?g=<id>` bettet Spiele mit `"embed": true` ein und speichert Spielzeit, Rekorde und Spielstände
+- **SDK für Spiele**: `sdk/canopy-sdk.js` (Anleitung oben in der Datei)
 
 ## Neues Spiel eintragen
 
@@ -43,10 +45,13 @@ Canopy nutzt das Firebase-Projekt von Foil Eleven (`chess-rng`, Blaze-Tarif), ab
 - Abrechnung → Budget-Warnung setzen
 - Authentication: Anbieter Google aktivieren, autorisierte Domain der Canopy-Base-Seite eintragen
 
-### Regeln deployen
+### Regeln testen und deployen
 
 ```bash
-firebase deploy --only firestore
+npm i --no-save firebase-tools @firebase/rules-unit-testing firebase
+npx firebase emulators:exec --only firestore --project demo-canopy "node tests/rules.emulator.js"
+# nur wenn "Alle Regel-Tests bestanden":
+npx firebase deploy --only firestore --project chess-rng
 ```
 
 Deployt ausschließlich die Regeln der Datenbank `canopy` (siehe `firebase.json`).

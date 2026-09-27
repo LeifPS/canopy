@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Canopy ID</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    --ground: #F2F4F0; --surface: #FFFFFF; --ink: #15201B; --muted: #5B6862; --line: #D8DFDA;
+    --moss: #2E6A4E; --moss-ink: #FFFFFF; --sun: #D9962B; --danger: #B3402F; --field: #F7F9F6;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C; --moss: #5DAE84; --moss-ink: #0F1513; --sun: #E8AE4E; --danger: #E3735F; --field: #111A16; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; --ground: #0F1513; --surface: #161F1B; --ink: #E3EAE6; --muted: #92A29A; --line: #26312C; --moss: #5DAE84; --moss-ink: #0F1513; --sun: #E8AE4E; --danger: #E3735F; --field: #111A16; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 var(--body); }
+  .wrap { max-width: 880px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 32px); }
+  header { border-bottom: 1px solid var(--line); }
+  header .wrap { display: flex; align-items: center; gap: 10px; padding-block: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+  .brand svg { width: 30px; height: 30px; }
+  .brand b { font: 800 19px var(--display); letter-spacing: -.02em; }
+  .brand span { font: 500 19px var(--display); color: var(--muted); letter-spacing: -.02em; }
+  main { padding-block: clamp(24px, 5vw, 48px); }
+  h1 { font: 800 clamp(30px, 5vw, 44px)/1.05 var(--display); letter-spacing: -.03em; margin: 0 0 8px; text-wrap: balance; }
+  .lead { color: var(--muted); margin: 0 0 28px; max-width: 56ch; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: clamp(18px, 3vw, 26px); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; }
+  .tab { font: 600 14px var(--body); background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  form { display: grid; gap: 14px; }
+  label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+  label small { font-weight: 400; color: var(--muted); }
+  input { font: 500 15px var(--body); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; }
+  .btn { font: 600 15px var(--body); border-radius: 12px; padding: 11px 16px; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+  .btn.primary { background: var(--moss); color: var(--moss-ink); }
+  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+  .btn.danger { background: none; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .btn[disabled] { opacity: .6; cursor: progress; }
+  .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 16px 0; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .msg { font-size: 14px; border-radius: 10px; padding: 10px 12px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+  .msg.ok { background: color-mix(in srgb, var(--moss) 14%, transparent); color: var(--moss); }
+  :focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+  .benefits { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 6px; }
+  .who { display: flex; align-items: center; gap: 14px; }
+  .avatar { width: 56px; height: 56px; border-radius: 16px; background: var(--moss); color: var(--moss-ink); display: grid; place-items: center; font: 800 26px var(--display); flex: none; }
+  .who h2 { font: 800 24px var(--display); letter-spacing: -.02em; margin: 0; }
+  .who p { margin: 0; color: var(--muted); font-size: 14px; }
+  .pill { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 2px 7px; background: color-mix(in srgb, var(--sun) 22%, transparent); color: var(--ink); }
+  .totals { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 20px 0 6px; color: var(--muted); font-size: 14px; }
+  .totals b { font: 800 22px var(--display); color: var(--ink); margin-right: 5px; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  td.num, th.num { text-align: right; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .confirm { border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-radius: 12px; padding: 14px; display: grid; gap: 10px; margin-top: 14px; }
+  .muted { color: var(--muted); }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Zurück zu Canopy Base">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M3 22a13 13 0 0 1 26 0z" fill="var(--moss)"/><path d="M8 22a8 8 0 0 1 16 0z" fill="var(--sun)"/><rect x="15" y="22" width="2" height="7" rx="1" fill="var(--ink)"/></svg>
+      <b>Canopy</b><span>ID</span>
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="view"><p class="muted">Wird geladen …</p></div>
+</main>
+
+<script type="module">
+import * as id from './js/canopy-id.js';
+
+const view = document.getElementById('view');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let games = [];
+fetch('games.json').then((r) => r.json()).then((d) => { games = d.games || []; }).catch(() => {});
+let tab = 'register';
+let lastState = null;
+
+const GOOGLE = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.9l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.5 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>';
+
+function busy(form, on) { form.querySelectorAll('button').forEach((b) => (b.disabled = on)); }
+function showMsg(el, text, ok = false) { el.hidden = !text; el.textContent = text || ''; el.className = 'msg' + (ok ? ' ok' : ''); }
+
+function renderSignedOut(s) {
+  const guest = s.isGuest;
+  view.innerHTML = `
+    <h1>${guest ? 'Sichere deinen Fortschritt' : 'Ein Account für alle Spiele'}</h1>
+    <p class="lead">${guest
+      ? 'Du spielst gerade als Gast. Erstelle einen Account, dann bleibt alles erhalten und du kannst auf jedem Gerät weiterspielen.'
+      : 'Mit Canopy ID wird dein Fortschritt online gespeichert. Du spielst auf jedem Gerät weiter, siehst deine Spielzeit und kannst dich mit Freunden vergleichen.'}</p>
+    <div class="grid2">
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="register" aria-selected="${tab === 'register'}">Registrieren</button>
+          <button class="tab" role="tab" data-tab="login" aria-selected="${tab === 'login'}">Anmelden</button>
+        </div>
+        <form id="form" novalidate>
+          <label for="name">Nutzername <small>3–20 Zeichen: Kleinbuchstaben, Zahlen, _</small>
+            <input id="name" name="name" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="20"></label>
+          <label for="pw">Passwort ${tab === 'register' ? '<small>mindestens 8 Zeichen</small>' : ''}
+            <input id="pw" name="pw" type="password" autocomplete="${tab === 'register' ? 'new-password' : 'current-password'}" required></label>
+          <div id="formMsg" class="msg" hidden></div>
+          <button class="btn primary" type="submit">${tab === 'register' ? 'Account erstellen' : 'Anmelden'}</button>
+        </form>
+        <div class="or">oder</div>
+        <button class="btn ghost" id="google" type="button" style="width:100%">${GOOGLE}Mit Google ${tab === 'register' ? 'registrieren' : 'anmelden'}</button>
+        ${tab === 'register' ? '<p class="muted" style="font-size:13px;margin:14px 0 0">Wir speichern keine E-Mail-Adresse. Merk dir dein Passwort gut oder verbinde zusätzlich Google, denn ohne E-Mail lässt sich ein vergessenes Passwort nicht selbst zurücksetzen.</p>' : ''}
+      </section>
+      <aside class="panel">
+        <h2 style="font:700 20px var(--display);margin:0 0 10px;letter-spacing:-.02em">Was du bekommst</h2>
+        <ul class="benefits">
+          <li>Fortschritt online gespeichert, auf jedem Gerät weiterspielen</li>
+          <li>Spielzeit und Rekorde aus allen Spielen an einem Ort</li>
+          <li>Bald: Achievements, Freunde und Bestenlisten</li>
+          <li>Deine bisherigen Spielstände bleiben erhalten</li>
+        </ul>
+      </aside>
+    </div>`;
+  view.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; renderSignedOut(lastState); }));
+  const form = view.querySelector('#form');
+  const msg = view.querySelector('#formMsg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = form.name.value, pw = form.pw.value;
+    busy(form, true); showMsg(msg, '');
+    try { tab === 'register' ? await id.register(name, pw) : await id.login(name, pw); }
+    catch (err) { showMsg(msg, err.message); }
+    finally { busy(form, false); }
+  });
+  view.querySelector('#google').addEventListener('click', async () => {
+    showMsg(msg, '');
+    try { await id.loginWithGoogle(); } catch (err) { showMsg(msg, err.message); }
+  });
+}
+
+function renderChooseName() {
+  view.innerHTML = `
+    <h1>Wähle deinen Nutzernamen</h1>
+    <p class="lead">So sehen dich andere in Bestenlisten und bei Freunden.</p>
+    <section class="panel" style="max-width:440px">
+      <form id="form" novalidate>
+        <label for="name">Nutzername <small>3–20 Zeichen: Kleinbuchstaben, Zahlen, _</small>
+          <input id="name" autocapitalize="none" spellcheck="false" maxlength="20" required></label>
+        <div id="formMsg" class="msg" hidden></div>
+        <button class="btn primary" type="submit">Weiter</button>
+      </form>
+      <button class="btn ghost" id="out" type="button" style="margin-top:12px">Abmelden</button>
+    </section>`;
+  const form = view.querySelector('#form'), msg = view.querySelector('#formMsg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); busy(form, true); showMsg(msg, '');
+    try { await id.chooseName(form.name.value); } catch (err) { showMsg(msg, err.message); } finally { busy(form, false); }
+  });
+  view.querySelector('#out').addEventListener('click', () => id.logout());
+}
+
+function fmtTime(sec) {
+  sec = Math.round(sec || 0);
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  return h ? `${h} Std. ${m} Min.` : `${m} Min.`;
+}
+
+function renderProfile(s) {
+  const p = s.profile || {};
+  const stats = p.games || {};
+  const rows = Object.entries(stats).map(([gid, g]) => ({ gid, title: games.find((x) => x.id === gid)?.title || gid, ...g }))
+    .sort((a, b) => (b.playSec || 0) - (a.playSec || 0));
+  const total = rows.reduce((t, r) => t + (r.playSec || 0), 0);
+  const google = s.user.providerData.some((x) => x.providerId === 'google.com');
+  const since = p.createdAt?.toDate ? new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(p.createdAt.toDate()) : null;
+  view.innerHTML = `
+    <section class="panel">
+      <div class="who">
+        <div class="avatar" aria-hidden="true">${esc((p.name || '?')[0].toUpperCase())}</div>
+        <div>
+          <h2>${esc(p.name)}</h2>
+          <p>${since ? `Dabei seit ${esc(since)}` : 'Canopy ID'}${google ? ' · mit Google verbunden' : ''}</p>
+        </div>
+      </div>
+      <div class="totals">
+        <span><b>${fmtTime(total)}</b>gespielt</span>
+        <span><b>${rows.length}</b>${rows.length === 1 ? 'Spiel' : 'Spiele'}</span>
+      </div>
+      ${rows.length ? `<div class="table-wrap"><table>
+        <thead><tr><th>Spiel</th><th class="num">Spielzeit</th><th class="num">Rekord</th><th class="num">Runden</th></tr></thead>
+        <tbody>${rows.map((r) => `<tr><td>${esc(r.title)}</td><td class="num">${fmtTime(r.playSec)}</td><td class="num">${r.best ?? '–'}</td><td class="num">${r.runs ?? '–'}</td></tr>`).join('')}</tbody>
+      </table></div>` : '<p class="muted">Noch keine Spiele gespielt. Starte eins in Canopy Base, dann erscheint es hier.</p>'}
+      <div class="row">
+        <a class="btn primary" href="./" style="text-decoration:none">Zu den Spielen</a>
+        ${google ? '' : `<button class="btn ghost" id="linkGoogle" type="button">${GOOGLE}Google verbinden</button>`}
+        <button class="btn ghost" id="out" type="button">Abmelden</button>
+      </div>
+      <div id="msg" class="msg" hidden></div>
+    </section>
+    <section style="margin-top:28px">
+      <button class="btn danger" id="del" type="button">Account löschen</button>
+      <div id="confirm" class="confirm" hidden>
+        <strong>Account wirklich löschen?</strong>
+        <span class="muted">Dein Profil, deine Statistik und alle Spielstände in Canopy werden gelöscht. Das lässt sich nicht rückgängig machen. Spielstände, die noch direkt in einem Spiel liegen, bleiben dort.</span>
+        <div class="row" style="margin:0"><button class="btn danger" id="delYes" type="button">Endgültig löschen</button><button class="btn ghost" id="delNo" type="button">Abbrechen</button></div>
+      </div>
+    </section>`;
+  const msg = view.querySelector('#msg');
+  view.querySelector('#out').addEventListener('click', () => id.logout());
+  view.querySelector('#linkGoogle')?.addEventListener('click', async () => {
+    try { await id.linkGoogle(); showMsg(msg, 'Google ist jetzt verbunden.', true); } catch (e) { showMsg(msg, e.message); }
+  });
+  view.querySelector('#del').addEventListener('click', () => { view.querySelector('#confirm').hidden = false; });
+  view.querySelector('#delNo').addEventListener('click', () => { view.querySelector('#confirm').hidden = true; });
+  view.querySelector('#delYes').addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    try { await id.deleteAccount(); } catch (err) { showMsg(msg, err.message); e.target.disabled = false; }
+  });
+}
+
+id.onChange((s) => {
+  lastState = s;
+  if (s.error) { view.innerHTML = '<h1>Canopy ID ist gerade nicht erreichbar</h1><p class="lead">Prüfe deine Internetverbindung und lade die Seite neu.</p>'; return; }
+  if (!s.user || s.isGuest) return renderSignedOut(s);
+  if (!s.profile?.name) return renderChooseName();
+  renderProfile(s);
+});
+</script>
+</body>
+</html>

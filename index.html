@@ -155,8 +155,8 @@
       <b>Canopy</b><span>Base</span>
     </a>
     <div class="spacer"></div>
-    <span class="id-note">Fortschritt überall: bald mit Canopy ID</span>
-    <button class="id-btn" id="idBtn" type="button" aria-describedby="idPanel"><i class="dot"></i>Anmelden</button>
+    <span class="id-note" id="idNote">Ein Account für alle Spiele</span>
+    <a class="id-btn" id="idBtn" href="account.html" style="text-decoration:none"><i class="dot"></i><span id="idLabel">Anmelden</span></a>
   </div>
 </header>
 
@@ -182,7 +182,7 @@
           <ul class="feed" id="feed"></ul>
         </div>
         <aside class="id-panel" id="idPanel">
-          <span class="soon">In Arbeit</span>
+          <span class="soon">Neu</span>
           <h3>Canopy ID</h3>
           <p style="margin:0;color:var(--muted)">Ein Account für alle Spiele. Mit Nutzername und Passwort oder Google.</p>
           <ul>
@@ -191,6 +191,7 @@
             <li>Freunde, Bestenlisten und Rekord-Duelle</li>
             <li>Bestehende Spielstände bleiben erhalten und werden übernommen</li>
           </ul>
+          <a class="btn primary" href="account.html" id="idCta" style="justify-self:start">Account erstellen</a>
         </aside>
       </div>
     </section>
@@ -290,12 +291,12 @@
       <div>
         <div class="eyebrow">Canopy Base</div>
         <h1>Alle Spiele. <em>Ein Ort.</em></h1>
-        <p class="lead">Hier findest du jedes Canopy-Spiel, siehst was neu ist und was als Nächstes kommt. Bald speichert Canopy ID deinen Fortschritt aus allen Spielen an einem Ort.</p>
+        <p class="lead">Hier findest du jedes Canopy-Spiel, siehst was neu ist und was als Nächstes kommt. Mit Canopy ID liegt dein Fortschritt aus allen Spielen an einem Ort.</p>
         <div class="btn-row">
           ${g ? `<a class="btn primary" ${linkAttrs(g)}>${esc(g.title)} spielen</a>` : ''}
           <a class="btn ghost" href="#spiele">Alle Spiele ansehen</a>
         </div>
-        <div class="facts"><span><b>${live}</b>spielbar</span><span><b>${soon}</b>in Arbeit</span><span><b>1</b>Account für alles, bald</span></div>
+        <div class="facts"><span><b>${live}</b>spielbar</span>${soon ? `<span><b>${soon}</b>in Arbeit</span>` : ''}<span><b>1</b>Account für alles</span></div>
       </div>
       ${g ? `<a class="spot-card" ${linkAttrs(g)} style="background:${esc(g.color)}">
         <div class="cover">${cover(g)}</div>
@@ -351,10 +352,6 @@
     filter = b.dataset.f; renderFilters(); renderGrid();
   });
   $('#search').addEventListener('input', (e) => { query = e.target.value; renderGrid(); });
-  $('#idBtn').addEventListener('click', () => {
-    const p = $('#idPanel'); p.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    p.animate?.([{ boxShadow: '0 0 0 0 var(--sun)' }, { boxShadow: '0 0 0 6px transparent' }], { duration: 900 });
-  });
   $('#year').textContent = today.getFullYear();
 
   fetch('games.json')
@@ -362,6 +359,17 @@
     .then((data) => { games = data.games || []; renderAll(); refreshFromGitHub().catch(() => {}); })
     .catch(() => { $('#grid').innerHTML = '<p class="empty">Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.</p>'; });
 })();
+</script>
+<script type="module">
+  import { onChange } from './js/canopy-id.js';
+  onChange((s) => {
+    if (s.error || !s.user) return;
+    const label = s.isGuest ? 'Gast' : (s.name || 'Mein Account');
+    document.getElementById('idLabel').textContent = label;
+    document.getElementById('idNote').textContent = s.isGuest ? 'Sichere deinen Fortschritt' : 'Angemeldet';
+    const cta = document.getElementById('idCta');
+    if (cta && !s.isGuest) cta.textContent = 'Zu meinem Account';
+  });
 </script>
 </body>
 </html>

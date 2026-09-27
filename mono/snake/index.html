@@ -47,6 +47,7 @@
     <div class="hint">Pfeiltasten oder WASD · Wischen am Handy · P für Pause</div>
   </div>
 
+<script src="../../sdk/canopy-sdk.js"></script>
 <script>
 (() => {
   const N = 20;                       // Felder pro Seite
@@ -62,8 +63,12 @@
   try { best = Number(localStorage.getItem(BEST_KEY)) || 0; } catch (e) {}
   $('best').textContent = best;
 
-  // Kleiner Vorgriff auf das Canopy-SDK: der Hub bekommt Ereignisse per postMessage.
-  const canopy = (type, data) => { try { if (parent !== window) parent.postMessage({ canopy: 1, game: 'snake', type, ...data }, '*'); } catch (e) {} };
+  // Canopy: Rekord wird in Canopy ID gespeichert, damit er auf jedem Gerät da ist.
+  Canopy.ready('snake');
+  Canopy.load().then(({ data }) => {
+    if (data && data.best > best) { best = data.best; $('best').textContent = best; try { localStorage.setItem(BEST_KEY, best); } catch (e) {} }
+    else if (Canopy.inHub && best > (data?.best || 0)) Canopy.save({ best }).catch(() => {});
+  }).catch(() => {});
 
   let snake, dir, queue, apple, score, state = 'ready', timer = 0, last = 0, stepMs;
 
@@ -91,7 +96,6 @@
   function start() {
     if (state === 'over') reset();
     state = 'run'; $('overlay').hidden = true; last = performance.now(); timer = 0;
-    canopy('start');
     requestAnimationFrame(loop);
   }
   function pause() {
@@ -121,7 +125,8 @@
     state = 'over';
     const record = score > best;
     if (record) { best = score; $('best').textContent = best; try { localStorage.setItem(BEST_KEY, best); } catch (e) {} }
-    canopy('score', { score, record });
+    Canopy.score(score);
+    if (record) Canopy.save({ best }, { force: true }).catch(() => {});
     showOverlay(won ? 'Feld voll!' : record ? 'Neuer Rekord!' : 'Game over', `${score} Punkte · Tippen für neue Runde`);
     draw();
   }
@@ -172,7 +177,6 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 
   reset(); draw();
-  canopy('ready');
 })();
 </script>
 </body>

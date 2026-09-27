@@ -10,9 +10,15 @@ service cloud.firestore {
 
     // Öffentliches Profil: Name, Avatar, Level, sichtbare Achievements. Jeder darf lesen (Freunde,
     // Bestenlisten), nur der Besitzer schreibt.
+    // Der angezeigte Name muss ein Nutzername sein, der wirklich diesem Account gehört.
+    function nameOk(uid) {
+      return !('name' in request.resource.data)
+        || (resource != null && request.resource.data.name == resource.data.get('name', null))
+        || getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.name)).data.uid == uid;
+    }
     match /profiles/{uid} {
       allow read: if true;
-      allow create, update: if isOwner(uid);
+      allow create, update: if isOwner(uid) && nameOk(uid);
       allow delete: if isOwner(uid) || isAdmin();
     }
 
@@ -24,19 +30,21 @@ service cloud.firestore {
     // Nutzernamen sind eindeutig: ein Dokument pro Name, das auf die uid zeigt.
     match /usernames/{name} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && name.matches('^[a-z0-9_]{3,20}$');
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       allow update: if false;
     }
 
-    // Spielstände: saves/{uid}/games/{gameId}, dazu Versionen, die nie gelöscht oder
-    // überschrieben werden dürfen (Schutz gegen Datenverlust).
+    // Spielstände: saves/{uid}/games/{gameId}, dazu Versionen, die nie überschrieben werden dürfen
+    // (Schutz gegen Datenverlust). Löschen nur durch den Besitzer selbst ("Account löschen").
     match /saves/{uid}/games/{gameId} {
       allow read, write: if isOwner(uid) || isAdmin();
       match /versions/{versionId} {
         allow read: if isOwner(uid) || isAdmin();
         allow create: if isOwner(uid);
-        allow update, delete: if isAdmin();
+        allow delete: if isOwner(uid) || isAdmin();
+        allow update: if isAdmin();
       }
     }
 

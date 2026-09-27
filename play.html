@@ -31,7 +31,7 @@
   iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
   .msg { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 16px; color: var(--muted); }
   .msg a { color: var(--moss); }
-  @media (max-width: 520px) { .back span, .sep, #direct { display: none; } }
+  @media (max-width: 620px) { .back span, .sep, #direct { display: none; } }
 </style>
 </head>
 <body>
@@ -43,38 +43,88 @@
     <div class="sep"></div>
     <div class="title" id="title">Wird geladen</div>
     <div class="spacer"></div>
+    <a class="tool" id="who" hidden></a>
     <a class="tool" id="direct" target="_blank" rel="noopener" hidden>In neuem Tab</a>
     <button class="tool" id="full" type="button">Vollbild</button>
   </div>
   <main id="stage"></main>
 
-<script>
-(() => {
-  const id = new URLSearchParams(location.search).get('g');
-  const stage = document.getElementById('stage');
-  const fail = (text) => { stage.innerHTML = `<div class="msg"><p>${text}</p><p><a href="./">Zurück zu allen Spielen</a></p></div>`; };
+<script type="module">
+import * as id from './js/canopy-id.js';
 
-  fetch('games.json').then((r) => r.json()).then(({ games }) => {
-    const g = (games || []).find((x) => x.id === id);
-    if (!g || !g.url) return fail('Dieses Spiel gibt es nicht.');
-    if (!g.embed) { location.replace(g.url); return; } // noch nicht Canopy-fähig: direkt öffnen
-    document.title = `${g.title} · Canopy Base`;
-    document.getElementById('title').textContent = g.title;
-    const direct = document.getElementById('direct');
-    direct.href = g.url; direct.hidden = false;
-    const f = document.createElement('iframe');
-    f.src = g.url;
-    f.title = g.title;
-    f.allow = 'fullscreen; autoplay; gamepad; clipboard-write';
-    stage.appendChild(f);
-    f.addEventListener('load', () => { try { f.contentWindow.focus(); } catch (e) {} });
-  }).catch(() => fail('Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.'));
+const gameKey = new URLSearchParams(location.search).get('g');
+const stage = document.getElementById('stage');
+const fail = (text) => { stage.innerHTML = `<div class="msg"><p>${text}</p><p><a href="./">Zurück zu allen Spielen</a></p></div>`; };
+let frame = null, game = null, origin = '*';
 
-  document.getElementById('full').addEventListener('click', () => {
-    const el = stage;
-    (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).catch(() => {});
-  });
-})();
+// Wer spielt, oben rechts anzeigen
+const who = document.getElementById('who');
+id.onChange((s) => {
+  if (s.error || !s.user) { who.textContent = 'Anmelden'; who.href = 'account.html'; }
+  else if (s.isGuest) { who.textContent = 'Gast · Fortschritt sichern'; who.href = 'account.html'; }
+  else { who.textContent = s.name || 'Mein Account'; who.href = 'account.html'; }
+  who.hidden = false;
+  if (frame) send({ type: 'user', user: { name: s.name, guest: s.isGuest } });
+});
+
+function send(msg) { try { frame.contentWindow.postMessage({ canopy: 1, ...msg }, origin); } catch (e) {} }
+const reply = (reqId, ok, resultOrError) => send(ok ? { type: 'reply', reqId, ok, result: resultOrError } : { type: 'reply', reqId, ok, error: resultOrError });
+
+// Spielzeit: nur zählen, solange die Seite sichtbar ist. Alle 60 s und beim Verlassen speichern.
+let playing = false, acc = 0, lastTick = 0;
+function tick() { const now = performance.now(); if (playing && !document.hidden) acc += (now - lastTick) / 1000; lastTick = now; }
+function flush() { tick(); const sec = Math.floor(acc); if (sec >= 5 && game) { acc -= sec; id.addPlaytime(game.id, sec).catch(() => {}); } }
+setInterval(tick, 1000);
+setInterval(flush, 60000);
+document.addEventListener('visibilitychange', () => { tick(); if (document.hidden) flush(); });
+addEventListener('pagehide', flush);
+
+addEventListener('message', async (e) => {
+  if (!frame || e.source !== frame.contentWindow) return;
+  const m = e.data;
+  if (!m || m.canopy !== 1) return;
+  try {
+    switch (m.type) {
+      case 'ready':
+        playing = true; lastTick = performance.now();
+        id.ensureUser().then(() => { const s = id.state(); send({ type: 'user', user: { name: s.name, guest: s.isGuest } }); }).catch(() => {});
+        break;
+      case 'score':
+        await id.ensureUser(); await id.reportScore(game.id, m.score);
+        break;
+      case 'load':
+        reply(m.reqId, true, await id.loadSave(game.id));
+        break;
+      case 'save':
+        reply(m.reqId, true, await id.writeSave(game.id, m.data, m.baseVersion));
+        break;
+    }
+  } catch (err) {
+    if (m.reqId) reply(m.reqId, false, err.message || 'Fehler');
+  }
+});
+
+fetch('games.json').then((r) => r.json()).then(({ games }) => {
+  game = (games || []).find((x) => x.id === gameKey);
+  if (!game || !game.url) return fail('Dieses Spiel gibt es nicht.');
+  if (!game.embed) { location.replace(game.url); return; } // noch nicht Canopy-fähig: direkt öffnen
+  document.title = `${game.title} · Canopy Base`;
+  document.getElementById('title').textContent = game.title;
+  const direct = document.getElementById('direct');
+  direct.href = game.url; direct.hidden = false;
+  const url = new URL(game.url, location.href);
+  origin = url.origin;
+  frame = document.createElement('iframe');
+  frame.src = url.href;
+  frame.title = game.title;
+  frame.allow = 'fullscreen; autoplay; gamepad; clipboard-write';
+  stage.appendChild(frame);
+  frame.addEventListener('load', () => { try { frame.contentWindow.focus(); } catch (e) {} });
+}).catch(() => fail('Die Spieleliste konnte nicht geladen werden. Lade die Seite neu.'));
+
+document.getElementById('full').addEventListener('click', () => {
+  (stage.requestFullscreen ? stage.requestFullscreen() : Promise.reject()).catch(() => {});
+});
 </script>
 </body>
 </html>
