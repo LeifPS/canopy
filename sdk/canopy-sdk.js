@@ -12,6 +12,9 @@
  * Läuft das Spiel nicht in Canopy Base (Canopy.inHub === false), passiert nichts und
  * load() liefert { data: null }. Das Spiel speichert dann wie bisher nur lokal.
  *
+ * Wann speichern: kurz (ca. 2 s) nach jeder Änderung, gebündelt. Nur in Intervallen oder beim
+ * Schließen zu speichern reicht nicht: Beim Schließen des Tabs bricht der Browser das Hochladen ab.
+ *
  * Konflikte: Wurde der Stand inzwischen auf einem anderen Gerät gespeichert, liefert save()
  * { conflict: true, data, version } statt zu überschreiben. Das Spiel fragt dann den Spieler
  * und ruft ggf. Canopy.save(daten, { force: true }).

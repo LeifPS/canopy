@@ -190,21 +190,29 @@ export async function loadSave(gameId) {
   return { data: d.data ?? null, version: d.version || 0, updatedAt: d.updatedAt?.toMillis?.() || null };
 }
 
+const SNAPSHOT_EVERY_MS = 10 * 60 * 1000; // höchstens alle 10 Minuten eine Sicherungskopie
+
 export async function writeSave(gameId, data, baseVersion) {
   const user = await ensureUser();
   const text = typeof data === 'string' ? data : JSON.stringify(data);
   if (text.length > MAX_SAVE_CHARS) throw friendly('save-too-big');
   const ref = sdk.doc(db, 'saves', user.uid, 'games', gameId);
+  const versionRef = (v, t) => sdk.doc(db, 'saves', user.uid, 'games', gameId, 'versions', `${String(v).padStart(8, '0')}-${t}`);
   return sdk.runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const current = snap.exists() ? (snap.data().version || 0) : 0;
+    const prev = snap.exists() ? snap.data() : null;
+    const current = prev?.version || 0;
     if (typeof baseVersion === 'number' && current > baseVersion) {
-      return { ok: false, conflict: true, version: current, data: snap.data().data ?? null };
+      return { ok: false, conflict: true, version: current, data: prev.data ?? null };
     }
+    const now = Date.now();
+    const forced = typeof baseVersion !== 'number';
+    // Wird ein Stand ersetzt, ohne darauf aufzubauen (Übertragen, "force"), bleibt der alte als Kopie erhalten.
+    if (forced && prev?.data != null) tx.set(versionRef(current, now - 1), { data: prev.data, version: current, updatedAt: sdk.serverTimestamp(), replaced: true });
+    const due = forced || !prev?.snapAt || now - prev.snapAt >= SNAPSHOT_EVERY_MS;
     const version = current + 1;
-    const doc = { data: text, version, updatedAt: sdk.serverTimestamp() };
-    tx.set(ref, doc);
-    tx.set(sdk.doc(db, 'saves', user.uid, 'games', gameId, 'versions', String(version).padStart(8, '0')), doc);
+    tx.set(ref, { data: text, version, updatedAt: sdk.serverTimestamp(), snapAt: due ? now : prev.snapAt });
+    if (due) tx.set(versionRef(version, now), { data: text, version, updatedAt: sdk.serverTimestamp() });
     return { ok: true, version };
   });
 }
